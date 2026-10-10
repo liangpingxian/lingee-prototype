@@ -1,0 +1,208 @@
+import { useEffect, useRef, useState } from "react"
+import { Button, DockPrompt, Icon } from "@/ui"
+import { cx } from "@/lib/cx"
+import { useT } from "@/i18n"
+import type { QuestionRequest } from "@/mock/types"
+import { Mark, QuestionOption } from "./QuestionOption"
+import { useQuestionState } from "./use-question-state"
+
+/**
+ * 提问 dock：模型向用户确认信息时顶替输入框出现。
+ * 多道题纵向排列、可上下切换；每题支持预设选项 + 自己输入；全部作答（或跳过）后才能确认。
+ */
+export function QuestionDock(props: { request: QuestionRequest; onSubmit: (answers: string[][]) => void }) {
+  const t = useT()
+  const questions = props.request.questions
+  const state = useQuestionState(questions)
+  const sections = useRef<Array<HTMLDivElement | null>>([])
+  const [hoverConfirm, setHoverConfirm] = useState(false)
+  const single = questions.length <= 1
+  const hasRecommended = questions.some((q) => q.options.some((o) => o.recommended))
+  const customLabel = t("ui.messagePart.option.typeOwnAnswer")
+  const customPlaceholder = t("ui.question.custom.placeholder")
+
+  // 切题时把对应题目滚到可视区
+  useEffect(() => {
+    sections.current[state.tab]?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+  }, [state.tab])
+
+  const confirm = () => {
+    if (!state.allAnswered) return
+    props.onSubmit(state.answers)
+  }
+  // 跳过当前题；跳过的是最后一道未答题时直接提交
+  const skip = () => {
+    const remaining = state.unanswered.filter((i) => i !== state.tab)
+    state.skip(state.tab)
+    if (remaining.length === 0) return props.onSubmit(state.answers.map((x, i) => (i === state.tab ? [] : x)))
+    state.setTab(remaining[0])
+  }
+
+  return (
+    <DockPrompt
+      kind="question"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) confirm()
+      }}
+      header={
+        single ? undefined : (
+          <div data-slot="question-progress-row">
+            <span data-slot="question-multi-title">{t("ui.question.multiSelectTitle")}</span>
+            <div data-slot="question-progress-text">
+              <button
+                type="button"
+                data-slot="question-progress-nav"
+                data-direction="prev"
+                disabled={state.tab <= 0}
+                onClick={() => state.setTab(state.tab - 1)}
+                aria-label={t("ui.common.back")}
+              >
+                <Icon name="question-up" size="small" />
+              </button>
+              <span data-slot="question-progress-count">{`${state.tab + 1}/${questions.length}`}</span>
+              <button
+                type="button"
+                data-slot="question-progress-nav"
+                data-direction="next"
+                disabled={state.last}
+                onClick={() => state.setTab(state.tab + 1)}
+                aria-label={t("ui.common.next")}
+              >
+                <Icon name="question-down" size="small" />
+              </button>
+            </div>
+          </div>
+        )
+      }
+      footer={
+        <>
+          {hasRecommended && (
+            <Button variant="ghost" size="large" onClick={state.selectAllRecommended} className="mr-auto inline-flex items-center gap-1.5">
+              <Icon name="check" size="small" className="size-4 shrink-0" />
+              {t("ui.question.selectAllRecommended")}
+            </Button>
+          )}
+          <Button variant="ghost" size="large" onClick={skip}>
+            {t("ui.common.skip")}
+          </Button>
+          <div data-slot="question-confirm-area" onMouseEnter={() => setHoverConfirm(true)} onMouseLeave={() => setHoverConfirm(false)}>
+            <div data-slot="question-footer-actions">
+              <Button
+                variant="primary"
+                size="large"
+                className={cx(
+                  "h-9 px-3 py-2 leading-[20px] text-[14px] font-[400] cursor-pointer rounded-[12px] bg-[var(--primary-600)] border-none hover:bg-[var(--primary-700)]",
+                  !state.allAnswered && "!cursor-not-allowed",
+                )}
+                disabled={!state.allAnswered}
+                onClick={confirm}
+              >
+                {t("ui.common.confirm")}
+              </Button>
+            </div>
+            {hoverConfirm && state.unanswered.length > 0 && !single && (
+              <div data-slot="question-unanswered-popup">
+                <span data-slot="popup-hint">{t("ui.question.unanswered.hint", { count: state.unanswered.length })}</span>
+                <div data-slot="popup-numbers">
+                  {state.unanswered.map((index) => (
+                    <button key={index} type="button" data-slot="popup-number-btn" onClick={() => state.setTab(index)}>
+                      {index + 1}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      }
+    >
+      <div data-slot="question-options">
+        {questions.map((q, qi) => (
+          <div
+            key={qi}
+            data-slot="question-section"
+            data-active={state.tab === qi}
+            ref={(el) => {
+              sections.current[qi] = el
+            }}
+            role={q.multiple ? "group" : "radiogroup"}
+            aria-label={q.question}
+          >
+            <div data-slot="question-header-main">
+              <div data-slot="question-header-title" title={q.question}>
+                {q.question}
+              </div>
+            </div>
+            {q.options.map((option, oi) => (
+              <QuestionOption
+                key={option.label}
+                multi={!!q.multiple}
+                picked={state.answers[qi].includes(option.label)}
+                index={oi + 1}
+                label={option.label}
+                description={option.description}
+                tag={option.recommended ? t("dialog.provider.tag.recommended") : undefined}
+                onClick={() => {
+                  state.setTab(qi)
+                  state.pick(qi, option.label)
+                }}
+              />
+            ))}
+            {q.custom !== false &&
+              (state.editing === qi ? (
+                <form
+                  data-slot="question-option"
+                  data-custom="true"
+                  data-picked={state.customPicked(qi)}
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    state.setEditing(null)
+                  }}
+                >
+                  <Mark multi={!!q.multiple} picked={state.customPicked(qi)} index={q.options.length + 1} />
+                  <span data-slot="question-option-main">
+                    <span data-slot="option-label">{customLabel}</span>
+                    <textarea
+                      autoFocus
+                      data-slot="question-custom-input"
+                      placeholder={customPlaceholder}
+                      value={state.custom[qi]}
+                      rows={1}
+                      wrap="soft"
+                      onChange={(e) => state.setCustomValue(qi, e.currentTarget.value)}
+                      onBlur={() => state.setEditing(null)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape" || (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing)) {
+                          e.preventDefault()
+                          state.setEditing(null)
+                        }
+                      }}
+                    />
+                  </span>
+                </form>
+              ) : (
+                <button
+                  type="button"
+                  data-slot="question-option"
+                  data-custom="true"
+                  data-picked={state.customPicked(qi)}
+                  role={q.multiple ? "checkbox" : "radio"}
+                  aria-checked={state.customPicked(qi)}
+                  onClick={() => {
+                    state.setTab(qi)
+                    state.setEditing(qi)
+                  }}
+                >
+                  <Mark multi={!!q.multiple} picked={state.customPicked(qi)} index={q.options.length + 1} />
+                  <span data-slot="question-option-main">
+                    <span data-slot="option-label">{customLabel}</span>
+                    <span data-slot="option-description">{state.custom[qi] || customPlaceholder}</span>
+                  </span>
+                </button>
+              ))}
+          </div>
+        ))}
+      </div>
+    </DockPrompt>
+  )
+}

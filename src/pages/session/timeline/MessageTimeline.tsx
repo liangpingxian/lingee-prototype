@@ -1,0 +1,78 @@
+import { useEffect, useMemo, useRef } from "react"
+import type { Message, Session } from "@/mock/types"
+import { SessionTurn } from "./SessionTurn"
+import { useCardActions } from "./use-card-actions"
+
+/** 把消息流切成「轮」：每条用户消息开启一轮，之后的助手消息归入该轮 */
+function toTurns(messages: Message[]) {
+  return messages.reduce<Array<{ user: Message; assistants: Message[] }>>((turns, message) => {
+    if (message.role === "user") return [...turns, { user: message, assistants: [] }]
+    const last = turns[turns.length - 1]
+    if (!last) return turns
+    return [...turns.slice(0, -1), { ...last, assistants: [...last.assistants, message] }]
+  }, [])
+}
+
+/** 会话时间线：固定标题 + 可滚动的消息区；流式输出时若用户停在底部则自动跟随 */
+export function MessageTimeline(props: { session: Session; messages: Message[] }) {
+  const scroller = useRef<HTMLDivElement>(null)
+  const stick = useRef(true)
+  const turns = useMemo(() => toTurns(props.messages), [props.messages])
+  const working = props.session.status === "running"
+  const onCardClick = useCardActions(props.session.projectId)
+
+  useEffect(() => {
+    const el = scroller.current
+    if (el && stick.current) el.scrollTop = el.scrollHeight
+  }, [props.messages])
+
+  useEffect(() => {
+    stick.current = true
+    const el = scroller.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [props.session.id])
+
+  return (
+    <div className="relative w-full h-full min-w-0 flex flex-col">
+      <div className="px-6">
+        <div data-session-title className="bg-background-page relative w-full py-3.5 px-0">
+          <div className="h-6 w-full flex items-center justify-center gap-2 relative">
+            <div className="flex flex-1 items-center justify-center min-w-0">
+              <div className="flex items-center justify-start min-w-0 grow-1">
+                <div className="group/title flex items-center min-w-0 shrink">
+                  <h1
+                    data-slot="session-title-child"
+                    className="text-[var(--session-title)] truncate min-w-0 font-[500] text-[16px] leading-[24px]"
+                    title={props.session.title}
+                  >
+                    {props.session.title}
+                  </h1>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        ref={scroller}
+        className="flex-1 min-h-0 overflow-y-auto px-6 pb-10"
+        onScroll={(e) => {
+          const el = e.currentTarget
+          stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48
+        }}
+      >
+        <div className="w-full md:max-w-[800px] md:mx-auto flex flex-col">
+          {turns.map((turn, index) => (
+            <SessionTurn
+              key={turn.user.id}
+              user={turn.user}
+              assistants={turn.assistants}
+              working={working && index === turns.length - 1}
+              onCardClick={onCardClick}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}

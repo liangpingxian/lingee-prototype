@@ -1,0 +1,128 @@
+import { db } from "./db"
+import { sleep, uid } from "./latency"
+import { pickScenario } from "./scenarios"
+import type { Message, Part, PermissionReply, SyncEvent, Todo } from "./types"
+
+type Emit = (event: SyncEvent) => void
+
+interface Run {
+  controller: AbortController
+  /** 回放停在提问 / 权限申请上时，这里存着让它继续的回调 */
+  resume?: (value: unknown) => void
+}
+
+const runs = new Map<string, Run>()
+
+/** 中止某个会话正在进行的回放（对应「停止生成」） */
+export function abortStream(sessionId: string) {
+  const run = runs.get(sessionId)
+  run?.controller.abort()
+  run?.resume?.(undefined)
+}
+
+/** 用户回答了提问（或跳过）/ 对权限申请做了决定：让暂停中的回放继续 */
+export function resumeStream(sessionId: string, value: string[][] | PermissionReply) {
+  runs.get(sessionId)?.resume?.(value)
+}
+
+/**
+ * 把剧本回放成一串事件：待办 → 推理 → 工具调用 → 提问 / 权限 → 正文逐字输出 → 产物卡片。
+ * 事件形状与真实后端的 SSE 对齐，页面只认事件，不关心来源。
+ */
+export async function runAssistantStream(sessionId: string, prompt: string, emit: Emit) {
+  const run: Run = { controller: new AbortController() }
+  runs.set(sessionId, run)
+  const aborted = () => run.controller.signal.aborted
+  const scenario = pickScenario({ prompt, projectId: db.sessions.find((x) => x.id === sessionId)?.projectId ?? "" })
+
+  const message: Message = { id: uid("msg"), sessionId, role: "assistant", agent: "build", time: { created: Date.now() }, parts: [] }
+  db.messages.push(message)
+  emit({ type: "session.status", sessionId, status: "running" })
+  emit({ type: "message.updated", message: structuredClone(message) })
+
+  const push = (part: Part) => {
+    const index = message.parts.findIndex((x) => x.id === part.id)
+    if (index === -1) message.parts.push(part)
+    else message.parts[index] = part
+    emit({ type: "message.part.updated", sessionId, messageId: message.id, part: structuredClone(part) })
+  }
+
+  const typewrite = async <T extends Part & { text: string }>(part: T, full: string, chunk: number, delay: number) => {
+    for (let i = 0; i < full.length && !aborted(); i += chunk) {
+      part.text = full.slice(0, i + chunk)
+      push(part)
+      await sleep(delay)
+    }
+  }
+
+  const todos: Todo[] = scenario.todos.map((content, i) => ({ id: `todo_${i}`, content, status: "pending" }))
+  const setTodo = (active: number) =>
+    emit({
+      type: "todo.updated",
+      sessionId,
+      todos: todos.map((todo, i) => ({ ...todo, status: i < active ? "completed" : i === active ? "in_progress" : "pending" })),
+    })
+
+  /** 暂停回放，等界面调用 resumeStream */
+  const wait = (status: "clarification") => {
+    emit({ type: "session.status", sessionId, status })
+    return new Promise<unknown>((resolve) => (run.resume = resolve)).then((value) => {
+      run.resume = undefined
+      if (!aborted()) emit({ type: "session.status", sessionId, status: "running" })
+      return value
+    })
+  }
+
+  await sleep(500)
+  for (const step of scenario.steps) {
+    if (aborted()) break
+    if (step.todo !== undefined) setTodo(step.todo)
+    if (step.reasoning) {
+      const part: Part = { id: uid("prt"), type: "reasoning", text: "", time: { start: Date.now() } }
+      await typewrite(part, step.reasoning, 3, 30)
+      part.time.end = Date.now()
+      push(part)
+    }
+    if (step.permission && !aborted()) {
+      emit({ type: "permission.asked", request: { id: uid("per"), sessionId, ...step.permission } })
+      const reply = (await wait("clarification")) as PermissionReply | undefined
+      emit({ type: "permission.replied", sessionId })
+      if (reply === "reject") {
+        push({ id: uid("prt"), type: "text", text: "已按你的要求取消执行该命令。需要继续时告诉我即可。" })
+        break
+      }
+    }
+    for (const tool of step.tools ?? []) {
+      if (aborted()) break
+      const part: Part = { id: uid("prt"), type: "tool", ...tool, state: "running" }
+      push({ ...part, detail: undefined, output: undefined })
+      await sleep(600 + Math.random() * 500)
+      push({ ...part, state: "completed" })
+    }
+    if (step.question && !aborted()) {
+      const tool: Part = { id: uid("prt"), type: "tool", tool: "question", title: step.question[0].question, state: "running" }
+      push(tool)
+      emit({ type: "question.asked", request: { id: uid("que"), sessionId, questions: step.question } })
+      const answers = (await wait("clarification")) as string[][] | undefined
+      emit({ type: "question.replied", sessionId })
+      const summary = (answers ?? []).map((x) => x.join("、")).filter(Boolean)
+      push({ ...tool, state: "completed", detail: summary.join("；") || "已跳过", output: summary.join("\n") || undefined })
+    }
+    if (step.text && !aborted()) {
+      await typewrite({ id: uid("prt"), type: "text", text: "" }, step.text, 4, 24)
+    }
+    if (step.card && !aborted()) {
+      // 卡片指令整段一次推出，避免逐字输出时把半截指令当正文显示
+      const card = step.card()
+      push({ id: uid("prt"), type: "text", text: `:::render:${card.kind} ${JSON.stringify(card.config)}:::` })
+    }
+  }
+
+  if (!aborted()) emit({ type: "todo.updated", sessionId, todos: todos.map((todo) => ({ ...todo, status: "completed" })) })
+  message.time.completed = Date.now()
+  runs.delete(sessionId)
+  emit({ type: "question.replied", sessionId })
+  emit({ type: "permission.replied", sessionId })
+  emit({ type: "message.updated", message: structuredClone(message) })
+  emit({ type: "session.status", sessionId, status: "idle" })
+}

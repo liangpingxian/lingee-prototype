@@ -1,0 +1,51 @@
+/* 入口样式：全部来自 src/vendor（由 bun run sync 从 lingee-build 同步），这里只负责按原顺序引入 */
+@import "./vendor/kcode-web/src/index.css";
+@import "./vendor/kcode-ui/components/empty.css";
+@import "./vendor/kcode-ui/components/drawer-panel.css";
+@import "./vendor/kcode-ui/components/render-card.css";
+@import "./vendor/kcode-web/src/components/dev-page-layout.css";
+@import "./vendor/kcode-web/src/components/skill-batch/batch-action-bar.css";
+@import "./vendor/kcode-web/src/components/prompt-input/prompt-input-bar.css";
+@import "./vendor/kcode-web/src/components/prompt-input/model-selector.css";
+@import "./vendor/kcode-web/src/components/prompt-input/slash-popover.css";
+@import "./vendor/kcode-web/src/pages/session/message-timeline.css";
+
+/* Tailwind 默认只扫描 src/，入口 HTML 里的类名需要单独声明 */
+@source "../index.html";
+
+/*
+ * dark: 变体跟着应用自己的主题走（<html data-color-scheme="dark">），而不是跟系统的深浅色偏好。
+ * 否则系统是深色、应用是浅色时，写了 dark: 的地方（如首页推荐卡片）会单独变黑。
+ */
+@custom-variant dark (&:where([data-color-scheme="dark"], [data-color-scheme="dark"] *));
+
+/*
+ * 侧边栏是半透明的，线上由客户端窗口垫在后面。浏览器里没有这层，系统深色时会透出黑色画布，
+ * 所以给页面补一个跟应用主题走的底色。
+ */
+html {
+  background-color: var(--background-page, #fff);
+}
+
+/*
+ * 线上在几处用行内样式把分段页签的轨道色、文字色写死成浅色值，深色主题下会变成一条白带。
+ * 这里改成只在浅色主题下生效，深色主题用主题自己的值。
+ */
+:root:not([data-color-scheme="dark"]) .light-segmented {
+  --surface-segmented-track: rgb(240, 240, 243);
+  --text-base: rgba(0, 0, 0, 0.64);
+  --text-strong: rgba(0, 0, 0, 0.94);
+}
+
+/* 智能体详情弹窗里的卡片底色：浅色主题是很淡的灰，深色主题跟主题走 */
+:root:not([data-color-scheme="dark"]) .agent-detail-cards {
+  --agent-config-card-bg: #fafbfc;
+}
+
+/* 线上技能卡片有两处写死的浅色值（描述文字、悬停底色），深色主题下补上对应的 token */
+:root[data-color-scheme="dark"] .skill-dev-tile[data-component="tile"] [data-slot="tile-desc"] {
+  color: var(--text-weak);
+}
+:root[data-color-scheme="dark"] .skill-dev-tile.tile-filled[data-component="tile"]:hover {
+  background: var(--surface-raised-stronger-non-alpha);
+}
