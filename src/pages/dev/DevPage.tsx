@@ -3,6 +3,8 @@ import { Empty } from "@/ui"
 import { useT } from "@/i18n"
 import { NAV_ITEMS } from "@/features/sidebar/nav-config"
 import { AgentDevPage } from "./agent/AgentDevPage"
+import { AppDevPage } from "./app/AppDevPage"
+import { CollabPage } from "./collab/CollabPage"
 import { McpAppDevPage } from "./mcp-app/McpAppDevPage"
 import { SkillDevPage } from "./skill/SkillDevPage"
 
@@ -18,6 +20,10 @@ export function Component() {
         <AgentDevPage />
       ) : mode === "mcpapp" ? (
         <McpAppDevPage />
+      ) : mode === "app" ? (
+        <AppDevPage />
+      ) : mode === "expert" ? (
+        <CollabPage />
       ) : (
         <div className="size-full flex items-center justify-center">
           <Empty description={`${t(NAV_ITEMS.find((x) => x.id === mode)?.labelKey ?? "ui.empty.description")} · 原型待建`} />

@@ -11,6 +11,7 @@ import { useSync } from "@/stores/sync"
  * 会话里产物卡片的点击行为（对应原工程 session.tsx 的 onCardClick）：
  * - 点卡片主体：在右侧面板打开对应的抽屉（技能预览 / 智能体配置 / 业务组件详情），再点一次收起
  * - 「本地测试」：技能跳到新任务页并带上 /技能名；智能体新建一个测试会话
+ * - 应用卡片（苍穹表单 / 通用应用）：在右侧打开应用预览
  * - 业务组件的「预览」：原型里没有真的开发服务器，给一条提示
  */
 export function useCardActions(projectId: string): CardClick {
@@ -41,6 +42,11 @@ export function useCardActions(projectId: string): CardClick {
       const app = devStore.mcpApps.find((x) => x.appCode === config.appCode)
       if (!app) return showToast({ variant: "error", title: t("kcode.mcpApp.empty.noMatch") })
       return toggleDrawer({ kind: "kdapp-artifact", id: app.appCode, title: app.appName })
+    }
+    if (kind === "kdform" || kind === "kdstandalone") {
+      const app = devStore.apps.find((x) => x.id === config.appId)
+      if (!app) return showToast({ variant: "error", title: t("kcode.appDev.empty.noMatch") })
+      return toggleDrawer({ kind: "app", id: app.id, title: app.name })
     }
     if (kind === "kdapp-preview-start") return showToast({ description: `${t("kcode.mcpApp.action.preview")}：${config.url ?? ""}` })
   }

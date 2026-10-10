@@ -2,9 +2,9 @@ import { create } from "zustand"
 
 export type PreviewView = "review" | "fileTree" | "drawer"
 
-/** 右侧面板里打开的「产物抽屉」：技能预览 / 智能体配置 / 业务组件详情 */
+/** 右侧面板里打开的「产物抽屉」：技能预览 / 智能体配置 / 业务组件详情 / 应用预览 */
 export interface DrawerTarget {
-  kind: "kdskill" | "agentConfig" | "kdapp-artifact"
+  kind: "kdskill" | "agentConfig" | "kdapp-artifact" | "app"
   id: string
   title: string
 }

@@ -7,9 +7,9 @@ export const sessionService = {
   list: () => latency(db.sessions.filter((x) => !x.time.archived)),
   messages: (sessionId: string) => latency(db.messages.filter((x) => x.sessionId === sessionId), 250),
 
-  create(projectId: string, title: string) {
+  create(projectId: string, title: string, extra?: Pick<Session, "taskId">) {
     const now = Date.now()
-    const session: Session = { id: uid("ses"), projectId, title, time: { created: now, updated: now }, status: "idle" }
+    const session: Session = { id: uid("ses"), projectId, title, time: { created: now, updated: now }, status: "idle", ...extra }
     db.sessions.push(session)
     return latency(session, 80)
   },

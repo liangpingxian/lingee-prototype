@@ -17,11 +17,15 @@ export interface ScenarioStep {
 export interface Scenario {
   todos: string[]
   steps: ScenarioStep[]
+  /** 整段回放正常走完后执行（被中止则不执行），用来落库没有产物卡片的结果 */
+  onFinish?: () => void
 }
 
 export interface ScenarioContext {
   prompt: string
   projectId: string
+  /** 会话绑定的协作开发任务（任务执行会话才有） */
+  taskId?: string
 }
 
 /** 从提示词里猜一个产物名：优先取「」或【】里的字，否则取第一句的前几个字 */

@@ -3,8 +3,10 @@ import { DockContainer, DockShellForm, DockTray, IconButton, Tooltip } from "@/u
 import { cx } from "@/lib/cx"
 import { useT } from "@/i18n"
 import { usePrompt } from "@/stores/prompt"
+import { AppLinkPicker } from "./AppLinkPicker"
 import { AttachMenu } from "./AttachMenu"
 import { Editor, type EditorHandle } from "./Editor"
+import { ExpertPicker } from "./ExpertPicker"
 import { ModeChip } from "./ModeChip"
 import { ModelSelector } from "./ModelSelector"
 import { ProjectPicker } from "./ProjectPicker"
@@ -24,7 +26,7 @@ export interface PromptInputProps {
 }
 
 /**
- * 输入框：编辑区 + 底部工具条（+ 菜单 / 模式胶囊 / 模型 / 发送）。
+ * 输入框：编辑区 + 底部工具条（+ 菜单 / 选择专家 / 关联应用 / 模式胶囊 / 模型 / 发送）。
  * 外层结构、类名与原工程 components/prompt-input.tsx 保持一致，逻辑按能力拆到同目录的小文件里。
  */
 export function PromptInput(props: PromptInputProps) {
@@ -33,7 +35,10 @@ export function PromptInput(props: PromptInputProps) {
   const [focused, setFocused] = useState(false)
   const [empty, setEmpty] = useState(true)
   const [shake, setShake] = useState(false)
-  const { mode, draft, takeDraft } = usePrompt()
+  const [skill, setSkill] = useState<string>()
+  const { mode, draft, takeDraft, linkedApp, setLinkedApp } = usePrompt()
+  // 关联应用只对苍穹应用开发有意义
+  const linkable = skill === "app-build"
   const inSession = props.sessionId !== undefined
   const disabled = !props.working && empty
   const placeholder = t(mode === "quest" ? "prompt.placeholder.quest" : "prompt.placeholder.normal", { example: "", agent: "" })
@@ -61,7 +66,8 @@ export function PromptInput(props: PromptInputProps) {
     if (props.working) return props.onAbort()
     const text = editor.current?.value() ?? ""
     if (!text) return
-    props.onSubmit(text)
+    props.onSubmit(linkable && linkedApp ? `${text}\n关联应用：${linkedApp}` : text)
+    setLinkedApp(undefined)
     editor.current?.clear()
   }
 
@@ -116,6 +122,7 @@ export function PromptInput(props: PromptInputProps) {
                   onKeyIntercept={completion.intercept}
                   onChange={(state) => {
                     setEmpty(state.empty)
+                    setSkill(state.skill)
                     props.onSkillChange?.(state.skill)
                   }}
                 />
@@ -132,6 +139,8 @@ export function PromptInput(props: PromptInputProps) {
                 <div>
                   <div className="flex items-center gap-2">
                     <AttachMenu placement={inSession ? "top-start" : "bottom-start"} />
+                    <ExpertPicker placement={inSession ? "top-start" : "bottom-start"} compact={inSession} />
+                    {linkable && <AppLinkPicker placement={inSession ? "top-start" : "bottom-start"} />}
                   </div>
                 </div>
                 <div className="prompt-input-bar flex items-center gap-2 min-w-0 flex-1 relative">

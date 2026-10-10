@@ -10,7 +10,8 @@ export interface DevPageLayoutProps {
   addVariant?: "primary" | "secondary"
   /** 渲染在「新建」按钮左侧的自定义操作区 */
   addBeforeAction?: ReactNode
-  tabs: Array<{ value: string; label: string }>
+  /** 状态页签；不传则不显示（应用开发页没有状态筛选） */
+  tabs?: Array<{ value: string; label: string }>
   tab: string
   onTabChange: (value: string) => void
   searchValue: string
@@ -24,7 +25,7 @@ export interface DevPageLayoutProps {
 }
 
 /**
- * 技能 / 智能体 / 业务组件三个开发页共用的页面壳：
+ * 技能 / 智能体 / 业务组件 / 应用几个开发页共用的页面壳：
  * 顶部固定（标题、页签、刷新、搜索、新建），下方内容区滚动。业务逻辑留在各页面。
  */
 export function DevPageLayout(props: DevPageLayoutProps) {
@@ -55,7 +56,7 @@ export function DevPageLayout(props: DevPageLayoutProps) {
             </div>
 
             <div className="flex items-center justify-between">
-              <SegmentedControl className="dev-page-tabs" value={props.tab} onChange={props.onTabChange} items={props.tabs} />
+              {props.tabs && <SegmentedControl className="dev-page-tabs" value={props.tab} onChange={props.onTabChange} items={props.tabs} />}
               <div className="flex items-center gap-3 ml-auto">
                 {props.onRefresh && (
                   <Tooltip value={refreshLabel} placement="top" gutter={4}>
