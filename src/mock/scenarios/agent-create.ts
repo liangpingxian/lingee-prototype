@@ -1,3 +1,4 @@
+import { currentDisplayName } from "@/stores/auth"
 import { devStore } from "../dev-store"
 import type { Agent } from "../fixtures/dev"
 import type { Scenario, ScenarioContext } from "./types"
@@ -26,7 +27,7 @@ export const agentCreateScenario = ({ prompt, projectId }: ScenarioContext): Sce
               status: "saved",
               isChanged: !!x.backendStatus,
               role: `${x.role}\n\n# 补充要求\n- ${request || "按对话要求调整回答方式"}`,
-              changelog: { ...x.changelog, pending: [...x.changelog.pending, { createdAt: now, operator: "梁平先", summary }] },
+              changelog: { ...x.changelog, pending: [...x.changelog.pending, { createdAt: now, operator: currentDisplayName(), summary }] },
             }
           : x,
       )
@@ -48,7 +49,7 @@ export const agentCreateScenario = ({ prompt, projectId }: ScenarioContext): Sce
         ? [{ id: skill.name, name: skill.displayName, skillName: skill.name, desc: skill.desc, source: "local", publishStatus: skill.enterpriseStatus === "published" ? "published" : "unpublished" }]
         : [],
       knowledge: [],
-      changelog: { pending: [{ createdAt: now, operator: "梁平先", summary: "创建智能体" }], versions: [] },
+      changelog: { pending: [{ createdAt: now, operator: currentDisplayName(), summary: "创建智能体" }], versions: [] },
     }
     devStore.agents = [...devStore.agents.filter((x) => x.id !== id), agent]
     return { kind: "ai-partner", config: { id, title: name } }

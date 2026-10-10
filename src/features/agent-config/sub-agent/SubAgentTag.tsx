@@ -2,8 +2,8 @@ import { useT } from "@/i18n"
 import type { Agent } from "@/mock/fixtures/dev"
 
 const TAG_STYLE = {
-  official: "text-[#2f6fd0] bg-[#eaf2ff]",
-  beta: "text-[#b07d22] bg-[#fdf4e4]",
+  official: "text-[var(--primary-600)] bg-[color-mix(in_srgb,var(--primary-600)_12%,transparent)]",
+  beta: "text-[var(--warning-600)] bg-[color-mix(in_srgb,var(--warning-600)_12%,transparent)]",
   own: "text-text-base bg-[var(--surface-base)]",
 }
 
@@ -29,7 +29,7 @@ export function PublishTag(props: { agent: Agent }) {
   const t = useT()
   const live = isPublished(props.agent)
   return (
-    <span className={`shrink-0 rounded-[5px] px-[7px] py-[2px] text-[10.5px] leading-[1.5] font-medium ${live ? "text-text-base bg-[#f2f4f7]" : "text-text-weak bg-[var(--surface-base)]"}`}>
+    <span className={`shrink-0 rounded-[5px] px-[7px] py-[2px] text-[10.5px] leading-[1.5] font-medium text-text-weak bg-[var(--surface-base)]`}>
       {t(`kcode.agentDev.status.${live ? "published" : props.agent.status}`)}
     </span>
   )

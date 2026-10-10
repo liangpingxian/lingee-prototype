@@ -5,7 +5,7 @@ import { CHECK_CATEGORIES } from "@/mock/fixtures/skill-check"
 import { DynamicSkillIcon } from "@/features/dev-page/DynamicSkillIcon"
 import { BATCH_MAX, type BatchItem, type BatchMode, type BatchRoute, type BatchRun } from "./use-batch-run"
 
-const LIST_BOX = "max-h-[220px] min-h-0 overflow-y-auto rounded-[10px] border border-[#e5e5ea]"
+const LIST_BOX = "max-h-[220px] min-h-0 overflow-y-auto rounded-[10px] border border-[var(--border-weak-base)]"
 const hasWarn = (item: BatchItem) => Object.values(item.checkItems).some((x) => x.status === "warn")
 
 interface StepProps {
@@ -64,8 +64,8 @@ export function SelectStep({ run, mode, route }: StepProps) {
             key={item.skill.id}
             className={cx(
               "flex items-center gap-2.5 px-3.5 py-[9px] border-b border-[var(--border-weak-base)] last:border-b-0 transition-colors",
-              item.selected && !item.skipReason && "bg-[#fafaff]",
-              item.skipReason ? "opacity-45 cursor-default" : "cursor-pointer hover:bg-[#F3F5FF]",
+              item.selected && !item.skipReason && "bg-[color-mix(in_srgb,var(--primary-600)_10%,transparent)]",
+              item.skipReason ? "opacity-45 cursor-default" : "cursor-pointer hover:bg-[color-mix(in_srgb,var(--primary-600)_10%,transparent)]",
             )}
           >
             <input
@@ -98,13 +98,13 @@ export function SelectStep({ run, mode, route }: StepProps) {
         ))}
       </div>
       {run.selectedCount > BATCH_MAX && (
-        <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-[8px] bg-[#FFF5EC] border border-[rgba(255,119,0,0.25)] mt-2 shrink-0">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-[8px] bg-[color-mix(in_srgb,var(--warning-600)_12%,transparent)] border border-[rgba(255,119,0,0.25)] mt-2 shrink-0">
           <Icon name="warning-circle" size="small" className="size-4 text-[#FF7700] shrink-0" />
           <span className="text-[12px] leading-[1.5] text-[#FF7700]">{t("kcode.skillDev.batch.dialog.limitWarn")}</span>
         </div>
       )}
       {run.disabledCount > 0 && (
-        <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-[8px] bg-[#F2F7FF] mt-2 shrink-0">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-[8px] bg-[color-mix(in_srgb,var(--primary-600)_10%,transparent)] mt-2 shrink-0">
           <Icon name="info-fill" size="small" className="size-4 text-[#2970FF] shrink-0" />
           <span className="text-[12px] leading-[1.5] text-[#2970FF]">{t("kcode.skillDev.batch.dialog.unchangedWarn", { count: run.disabledCount })}</span>
         </div>
@@ -164,7 +164,7 @@ export function CheckingStep({ run }: StepProps) {
           const summary = summaryOf(item)
           return (
             <div key={item.skill.id} className="border-b border-[var(--border-weak-base)] last:border-b-0">
-              <div className="flex items-center gap-2 px-3.5 py-2 cursor-pointer select-none bg-[#F3F5FF]" onClick={() => run.toggleExpanded(item.skill.id)}>
+              <div className="flex items-center gap-2 px-3.5 py-2 cursor-pointer select-none bg-[color-mix(in_srgb,var(--primary-600)_10%,transparent)]" onClick={() => run.toggleExpanded(item.skill.id)}>
                 <Icon
                   name="chevron-right"
                   size="small"
@@ -312,7 +312,7 @@ export function DecisionStep({ run, mode, route }: StepProps) {
         </>
       )}
       {run.failItems.length === 0 && (
-        <div className="px-3 py-3 rounded-[8px] bg-[#eff6ff] text-[13px] text-[#1e40af] leading-[1.6]">
+        <div className="px-3 py-3 rounded-[8px] bg-[color-mix(in_srgb,var(--primary-600)_10%,transparent)] text-[13px] text-[#1e40af] leading-[1.6]">
           {t(route === "personal" ? "kcode.skillDev.batch.dialog.aboutPersonal" : "kcode.skillDev.batch.dialog.aboutEnterprise", { count: run.passItems.length })}
         </div>
       )}

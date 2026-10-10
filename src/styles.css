@@ -49,3 +49,8 @@ html {
 :root[data-color-scheme="dark"] .skill-dev-tile.tile-filled[data-component="tile"]:hover {
   background: var(--surface-raised-stronger-non-alpha);
 }
+
+/* 线上深色主题推导出的弹窗蒙层是半透明白色，页面会被罩上一层灰雾；原型里改成压暗 */
+:root[data-color-scheme="dark"] {
+  --dialog-overlay: rgba(0, 0, 0, 0.6);
+}

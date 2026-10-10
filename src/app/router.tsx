@@ -1,6 +1,7 @@
-import { createBrowserRouter, Navigate, Outlet } from "react-router"
+import { createBrowserRouter, Navigate, Outlet, useLocation } from "react-router"
 import { AppShell } from "./AppShell"
 import { Providers } from "./providers"
+import { useAuth } from "@/stores/auth"
 import { useSync } from "@/stores/sync"
 
 function Root() {
@@ -9,6 +10,14 @@ function Root() {
       <Outlet />
     </Providers>
   )
+}
+
+/** 未登录时一律先去登录页，登录后回到原来要去的地址 */
+function RequireAuth() {
+  const account = useAuth((s) => s.account)
+  const location = useLocation()
+  if (!account) return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
+  return <AppShell />
 }
 
 /** 首页：线上没有项目时才停留在 "/"，有项目则直接进入第一个项目的新任务页 */
@@ -23,8 +32,9 @@ export const router = createBrowserRouter([
   {
     Component: Root,
     children: [
+      { path: "login", lazy: () => import("@/pages/login/LoginPage") },
       {
-        Component: AppShell,
+        Component: RequireAuth,
         children: [
           { index: true, Component: HomeRedirect },
           { path: "p/:projectId/session/:sessionId?", lazy: () => import("@/pages/session/SessionPage") },

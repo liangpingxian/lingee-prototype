@@ -3,6 +3,13 @@
  * 做新功能原型时把 key 加在这里，中英文都要写；功能合进线上后，换成线上的 key 并从这里删掉。
  */
 export const localZh: Record<string, string> = {
+  "proto.login.title": "登录灵基 Build",
+  "proto.login.account": "账号",
+  "proto.login.accountPlaceholder": "请输入姓名全拼",
+  "proto.login.password": "密码",
+  "proto.login.passwordPlaceholder": "请输入密码",
+  "proto.login.submit": "登录",
+  "proto.login.error": "账号或密码不正确",
   "proto.subAgent.tab": "子智能体",
   "proto.subAgent.add": "添加",
   "proto.subAgent.summary": "共 {{total}} 个 · 企业自建 {{own}} · 金蝶官方 {{official}} · Beta {{beta}}",
@@ -32,6 +39,13 @@ export const localZh: Record<string, string> = {
 }
 
 export const localEn: Record<string, string> = {
+  "proto.login.title": "Sign in to Lingee Build",
+  "proto.login.account": "Account",
+  "proto.login.accountPlaceholder": "Full pinyin of your name",
+  "proto.login.password": "Password",
+  "proto.login.passwordPlaceholder": "Enter password",
+  "proto.login.submit": "Sign in",
+  "proto.login.error": "Incorrect account or password",
   "proto.subAgent.tab": "Sub-agents",
   "proto.subAgent.add": "Add",
   "proto.subAgent.summary": "{{total}} total · In-house {{own}} · Official {{official}} · Beta {{beta}}",

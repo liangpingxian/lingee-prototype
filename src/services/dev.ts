@@ -1,3 +1,4 @@
+import { currentDisplayName } from "@/stores/auth"
 import { devStore as store } from "@/mock/dev-store"
 import type { Agent, AgentChangeRecord, McpApp, Skill } from "@/mock/fixtures/dev"
 import { knowledgeDocs, knowledgeTree } from "@/mock/fixtures/knowledge"
@@ -35,7 +36,7 @@ export const agentService = {
   /** 保存配置面板的改动：本地标成「已编辑未提交」，并把改动摘要记进待发布列表 */
   save(id: string, patch: Partial<Agent>, changes: string[]) {
     const now = new Date().toISOString()
-    const records: AgentChangeRecord[] = changes.map((summary) => ({ createdAt: now, operator: "梁平先", summary }))
+    const records: AgentChangeRecord[] = changes.map((summary) => ({ createdAt: now, operator: currentDisplayName(), summary }))
     store.agents = store.agents.map((x) =>
       x.id === id
         ? { ...x, ...patch, status: "saved", isChanged: !!x.backendStatus, changelog: { ...x.changelog, pending: [...x.changelog.pending, ...records] } }
@@ -58,7 +59,7 @@ export const agentService = {
         rejectionRemark: undefined,
         changelog: {
           pending: [],
-          versions: [...x.changelog.versions, { version, releasedAt: new Date().toISOString(), operator: "梁平先", lines: x.changelog.pending.map((r) => r.summary).filter((s) => s !== "创建智能体") }],
+          versions: [...x.changelog.versions, { version, releasedAt: new Date().toISOString(), operator: currentDisplayName(), lines: x.changelog.pending.map((r) => r.summary).filter((s) => s !== "创建智能体") }],
         },
       }
     })

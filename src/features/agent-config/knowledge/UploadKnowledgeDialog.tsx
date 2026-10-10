@@ -46,7 +46,7 @@ export function UploadKnowledgeDialog(props: { existing: string[]; onConfirm: (f
           <div
             className={cx(
               "shrink-0 rounded-[12px] border-[1.5px] border-dashed text-center cursor-pointer transition-all",
-              dragging ? "border-[#2f7bff] bg-[#f4f8ff]" : "border-[var(--border-weak-base)] bg-[var(--surface-base)] hover:border-[#2f7bff] hover:bg-[#f4f8ff]",
+              dragging ? "border-[#2f7bff] bg-[color-mix(in_srgb,var(--primary-600)_10%,transparent)]" : "border-[var(--border-weak-base)] bg-[var(--surface-base)] hover:border-[#2f7bff] hover:bg-[color-mix(in_srgb,var(--primary-600)_10%,transparent)]",
             )}
             style={{ padding: "32px 20px" }}
             onClick={() => input.current?.click()}

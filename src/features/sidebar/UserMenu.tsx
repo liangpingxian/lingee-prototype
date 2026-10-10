@@ -1,9 +1,10 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
-import { Avatar, DropdownMenu, Icon, showToast } from "@/ui"
+import { Avatar, DropdownMenu, Icon } from "@/ui"
 import { inlinePaths } from "@/ui/icon/inline-paths.gen"
 import { cx } from "@/lib/cx"
 import { LOCALES, localeLabel, useLocaleStore, useT } from "@/i18n"
+import { useAuth } from "@/stores/auth"
 import { useSync } from "@/stores/sync"
 import { useThemeStore, type ColorScheme } from "@/theme"
 import { UsagePanel } from "./UsagePanel"
@@ -118,7 +119,7 @@ export function UserMenu() {
               <Icon name="setting" size="small" className="text-[var(--neutral-600)]" />
               <span className={LABEL}>{t("kcode.nav.configMgmt")}</span>
             </DropdownMenu.Item>
-            <DropdownMenu.Item onSelect={() => showToast({ title: t("sidebar.user.logout") })} className={ITEM}>
+            <DropdownMenu.Item onSelect={useAuth.getState().logout} className={ITEM}>
               <Icon name="logout" size="small" className="text-[var(--neutral-600)]" />
               <span className={LABEL}>{t("sidebar.user.logout")}</span>
             </DropdownMenu.Item>

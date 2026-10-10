@@ -11,6 +11,11 @@ export interface InputProps {
   placeholder?: string
   className?: string
   error?: string
+  /** 只对单行输入框生效 */
+  type?: "text" | "password"
+  name?: string
+  autoComplete?: string
+  autoFocus?: boolean
 }
 
 /** 带标签的表单输入框（单行 / 多行自适应高度）。结构对齐 kcode-ui 的 Input */
@@ -36,6 +41,10 @@ export function Input(props: InputProps) {
     readOnly: props.readOnly,
     disabled: props.disabled,
     placeholder: props.placeholder,
+    name: props.name,
+    autoComplete: props.autoComplete,
+    autoFocus: props.autoFocus,
+    "data-invalid": props.error ? "" : undefined,
   }
 
   return (
@@ -57,7 +66,7 @@ export function Input(props: InputProps) {
         {props.multiline ? (
           <textarea {...shared} ref={area} onChange={(e) => props.onChange?.(e.currentTarget.value)} />
         ) : (
-          <input {...shared} onChange={(e) => props.onChange?.(e.currentTarget.value)} />
+          <input {...shared} type={props.type} onChange={(e) => props.onChange?.(e.currentTarget.value)} />
         )}
       </div>
       {props.error && <div data-slot="form-input-error">{props.error}</div>}

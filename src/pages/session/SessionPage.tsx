@@ -68,11 +68,13 @@ export function Component() {
         <div
           className={cx(
             "@container relative shrink-0 flex flex-col min-h-0 h-full z-[1] overflow-hidden transition-[width] duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
-            previewOpen ? "flex-none min-w-0" : "flex-1 min-w-[680px]",
+            "flex-none",
+            previewOpen ? "min-w-0" : "min-w-[680px]",
             !sessionId && "pt-[calc(30vh_-_56px)]",
             sessionCollapsed && "pointer-events-none",
           )}
-          style={{ width: sessionCollapsed ? 0 : previewOpen ? SESSION_WIDTH : undefined }}
+          // 收起时也给一个明确的宽度（100%）：从 auto 过渡浏览器不会插值，面板开合会先跳一下
+          style={{ width: sessionCollapsed ? 0 : previewOpen ? SESSION_WIDTH : "100%" }}
         >
           <div className={cx("min-h-0 relative", sessionId ? "flex-1 overflow-hidden" : "w-full shrink-0 overflow-visible")}>
             {session ? (

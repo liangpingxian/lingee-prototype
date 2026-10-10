@@ -86,7 +86,7 @@ export function BatchDialog(props: BatchDialogProps) {
                     className={cx(
                       "size-8 rounded-full flex items-center justify-center text-[14px]",
                       current === i + 1 && "bg-[#495DFF] text-[#fff]",
-                      current > i + 1 && "bg-[#E9EDFF] text-[#495DFF]",
+                      current > i + 1 && "bg-[color-mix(in_srgb,var(--primary-600)_10%,transparent)] text-[#495DFF]",
                       current < i + 1 && "bg-[var(--surface-base)] text-text-weak",
                     )}
                   >

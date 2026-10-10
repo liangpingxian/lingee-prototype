@@ -1,6 +1,6 @@
 import type { IconName } from "@/ui"
 
-export type DevMode = "skill" | "agent" | "app" | "mcpapp" | "expert" | "cloudTenant"
+export type DevMode = "skill" | "agent" | "app" | "mcpapp" | "expert"
 
 /** 左侧开发导航：顺序、图标、文案 key 与线上一致 */
 export const NAV_ITEMS: Array<{ id: DevMode; icon: IconName; labelKey: string }> = [
@@ -9,7 +9,6 @@ export const NAV_ITEMS: Array<{ id: DevMode; icon: IconName; labelKey: string }>
   { id: "app", icon: "app-grid", labelKey: "kcode.nav.appDev" },
   { id: "mcpapp", icon: "cube", labelKey: "kcode.nav.mcpDev" },
   { id: "expert", icon: "collab", labelKey: "kcode.nav.expertDev" },
-  { id: "cloudTenant", icon: "cloud", labelKey: "kcode.nav.cloudTenant" },
 ]
 
 export type TopTab = "chat" | "work" | "dev"

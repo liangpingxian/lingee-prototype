@@ -112,7 +112,7 @@ export function DocCard(props: { doc: KnowledgeEntry; dirName: string; filled?: 
         <span
           className={cx(
             "text-[11px] rounded-[5px] font-medium",
-            props.filled ? "text-[#2f7bff] bg-[#eaf1ff]" : "text-[var(--primary-500)] border border-[var(--primary-500)] bg-transparent",
+            props.filled ? "text-[#2f7bff] bg-[color-mix(in_srgb,var(--primary-600)_10%,transparent)]" : "text-[var(--primary-500)] border border-[var(--primary-500)] bg-transparent",
           )}
           style={{ padding: "2px 8px" }}
         >
@@ -164,7 +164,7 @@ export function DocDetail(props: {
           <div className="text-[18px] font-bold text-text-strong leading-snug break-all">{props.name}</div>
           <div className="flex items-center flex-wrap gap-2 mt-2 text-[12px] text-text-weak">
             <span
-              className={cx("text-[11px] rounded-[5px]", props.tagOutlined ? "text-[var(--primary-500)] border border-[var(--primary-500)]" : "text-[#2f7bff] bg-[#eaf1ff]")}
+              className={cx("text-[11px] rounded-[5px]", props.tagOutlined ? "text-[var(--primary-500)] border border-[var(--primary-500)]" : "text-[#2f7bff] bg-[color-mix(in_srgb,var(--primary-600)_10%,transparent)]")}
               style={{ padding: "2px 8px" }}
             >
               {props.tag}
@@ -189,7 +189,7 @@ export function DocDetail(props: {
         </div>
       </div>
       {props.notice && (
-        <div className="shrink-0 text-[12px] text-[#d0524e] bg-[#fdecec] rounded-[7px]" style={{ padding: "8px 11px", marginBottom: 12, lineHeight: 1.6 }}>
+        <div className="shrink-0 text-[12px] text-[#d0524e] bg-[color-mix(in_srgb,var(--danger-600)_12%,transparent)] rounded-[7px]" style={{ padding: "8px 11px", marginBottom: 12, lineHeight: 1.6 }}>
           {props.notice}
         </div>
       )}

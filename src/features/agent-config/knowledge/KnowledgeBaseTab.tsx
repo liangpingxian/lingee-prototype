@@ -344,7 +344,7 @@ export function KnowledgeBaseTab(props: TabProps) {
                     <span>{t("kcode.agentKnowledge.uploadedAt", { time: date(binding.updatedAt) })}</span>
                   </div>
                   {binding.reviewComment && (
-                    <div className="text-[12px] text-[#d0524e] bg-[#fdecec] rounded-[7px]" style={{ padding: "7px 10px", marginTop: 10, lineHeight: 1.6 }}>
+                    <div className="text-[12px] text-[#d0524e] bg-[color-mix(in_srgb,var(--danger-600)_12%,transparent)] rounded-[7px]" style={{ padding: "7px 10px", marginTop: 10, lineHeight: 1.6 }}>
                       {t("kcode.agentKnowledge.rejectionReason", { reason: binding.reviewComment })}
                     </div>
                   )}
