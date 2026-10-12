@@ -33,8 +33,7 @@ export async function runAssistantStream(sessionId: string, prompt: string, emit
   const run: Run = { controller: new AbortController() }
   runs.set(sessionId, run)
   const aborted = () => run.controller.signal.aborted
-  const session = db.sessions.find((x) => x.id === sessionId)
-  const scenario = pickScenario({ prompt, projectId: session?.projectId ?? "", taskId: session?.taskId })
+  const scenario = pickScenario({ prompt, projectId: db.sessions.find((x) => x.id === sessionId)?.projectId ?? "" })
 
   const message: Message = { id: uid("msg"), sessionId, role: "assistant", agent: "build", time: { created: Date.now() }, parts: [] }
   db.messages.push(message)
@@ -119,7 +118,6 @@ export async function runAssistantStream(sessionId: string, prompt: string, emit
     }
   }
 
-  if (!aborted()) scenario.onFinish?.()
   if (!aborted()) emit({ type: "todo.updated", sessionId, todos: todos.map((todo) => ({ ...todo, status: "completed" })) })
   message.time.completed = Date.now()
   runs.delete(sessionId)

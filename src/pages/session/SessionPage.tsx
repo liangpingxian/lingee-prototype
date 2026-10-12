@@ -5,7 +5,6 @@ import { useT } from "@/i18n"
 import { PromptInput } from "@/features/prompt-input/PromptInput"
 import { PageActions } from "@/features/side-panel/PageActions"
 import { PreviewPanel } from "@/features/side-panel/PreviewPanel"
-import { TaskStageBar } from "@/features/task-run/TaskStageBar"
 import { useSidebarActions } from "@/features/sidebar/use-sidebar-actions"
 import { usePanel } from "@/stores/panel"
 import { usePrompt } from "@/stores/prompt"
@@ -30,7 +29,7 @@ export function Component() {
   const t = useT()
   const { projectId = "", sessionId } = useParams()
   const [search] = useSearchParams()
-  const editing = { kdskill: search.get("kdskill"), agent: search.get("agent"), mcpapp: search.get("mcpapp"), app: search.get("app") }
+  const editing = { kdskill: search.get("kdskill"), agent: search.get("agent"), mcpapp: search.get("mcpapp") }
   const { ready, projects, sessions, messages, loadMessages } = useSync()
   const setDraft = usePrompt((s) => s.setDraft)
   const actions = useSidebarActions()
@@ -47,7 +46,7 @@ export function Component() {
   }, [sessionId, loadMessages])
 
   // 面板是会话级的：换会话 / 换项目时收起并清空已打开的文件。
-  // 例外：从开发页点「编辑」进来时，地址里带着 ?kdskill= / ?agent= / ?mcpapp= / ?app=，直接打开对应产物的抽屉
+  // 例外：从开发页点「编辑」进来时，地址里带着 ?kdskill= / ?agent= / ?mcpapp=，直接打开对应产物的抽屉
   useEffect(() => {
     const panel = usePanel.getState()
     panel.reset()
@@ -57,9 +56,7 @@ export function Component() {
     if (skill) panel.toggleDrawer({ kind: "kdskill", id: skill.id, title: skill.displayName })
     if (agent) panel.toggleDrawer({ kind: "agentConfig", id: agent.id, title: agent.name })
     if (app) panel.toggleDrawer({ kind: "kdapp-artifact", id: app.appCode, title: app.appName })
-    const devApp = devStore.apps.find((x) => x.id === editing.app)
-    if (devApp) panel.toggleDrawer({ kind: "app", id: devApp.id, title: devApp.name })
-  }, [sessionId, projectId, editing.kdskill, editing.agent, editing.mcpapp, editing.app])
+  }, [sessionId, projectId, editing.kdskill, editing.agent, editing.mcpapp])
 
   if (!ready) return <div className="size-full bg-background-page" />
   if (!projects.some((x) => x.id === projectId) || (sessionId && !session)) return <Navigate to="/" replace />
@@ -95,7 +92,6 @@ export function Component() {
 
           <div data-component="session-prompt-dock" className="shrink-0 w-full flex flex-col justify-center items-center pointer-events-none">
             <div className={cx("w-full pointer-events-auto px-6 md:px-0 md:mx-auto", sessionId ? "md:max-w-[800px]" : "md:max-w-[710px]")}>
-              {sessionId && session?.taskId && <TaskStageBar taskId={session.taskId} sessionId={sessionId} working={session.status === "running"} />}
               {sessionId ? (
                 <Composer
                   projectId={projectId}

@@ -17,10 +17,6 @@ export interface Session {
   time: { created: number; updated: number; archived?: number }
   status: SessionStatus
   unread?: boolean
-  /** 从应用开发页打开某个应用时建的会话，记下是哪个应用，再次打开时复用 */
-  appId?: string
-  /** 协作开发任务的执行会话：记下是哪个任务，会话页据此显示阶段确认条 */
-  taskId?: string
 }
 
 export interface TextPart {

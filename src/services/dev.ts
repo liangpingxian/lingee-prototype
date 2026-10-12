@@ -1,10 +1,8 @@
 import { currentDisplayName } from "@/stores/auth"
-import { db } from "@/mock/db"
 import { devStore as store } from "@/mock/dev-store"
 import type { Agent, AgentChangeRecord, McpApp, Skill } from "@/mock/fixtures/dev"
 import { knowledgeDocs, knowledgeTree } from "@/mock/fixtures/knowledge"
-import { latency, uid } from "@/mock/latency"
-import type { Message, Session } from "@/mock/types"
+import { latency } from "@/mock/latency"
 
 /** 三个开发页的数据服务（mock）。增删改都落在内存里，刷新页面恢复初始数据 */
 export const skillService = {
@@ -116,45 +114,6 @@ export const mcpAppService = {
     }
     store.mcpApps = store.mcpApps.map((x) => (x.appCode === appCode ? next : x))
     return latency(next, 1800)
-  },
-}
-
-/** 应用开发页的数据服务（mock） */
-export const appService = {
-  list: () => latency(store.apps.map(({ id, name, desc, kind }) => ({ id, name, desc, kind })), 350),
-  get: (id: string) => store.apps.find((x) => x.id === id),
-  remove(id: string) {
-    store.apps = store.apps.filter((x) => x.id !== id)
-    return latency(true)
-  },
-  /**
-   * 点应用卡片：进入这个应用的开发会话。第一次打开时建会话并写入一轮对话（需求 + 交付说明 + 产物卡片），之后复用。
-   */
-  openSession(id: string, projectId: string) {
-    const app = store.apps.find((x) => x.id === id)
-    if (!app) return latency(undefined)
-    const existing = db.sessions.find((x) => x.appId === id && !x.time.archived)
-    if (existing) return latency(existing, 60)
-    const now = Date.now()
-    const session: Session = { id: uid("ses"), projectId, title: app.name, time: { created: now, updated: now }, status: "idle", appId: id }
-    const card = { kind: app.kind === "general" ? "kdstandalone" : "kdform", config: { appId: app.id, title: app.name } }
-    const messages: Message[] = [
-      { id: uid("msg"), sessionId: session.id, role: "user", time: { created: now, completed: now }, parts: [{ id: uid("prt"), type: "text", text: app.ask }] },
-      {
-        id: uid("msg"),
-        sessionId: session.id,
-        role: "assistant",
-        agent: "build",
-        time: { created: now, completed: now },
-        parts: [
-          { id: uid("prt"), type: "text", text: app.reply },
-          { id: uid("prt"), type: "text", text: `:::render:${card.kind} ${JSON.stringify(card.config)}:::` },
-        ],
-      },
-    ]
-    db.sessions.push(session)
-    db.messages.push(...messages)
-    return latency(session, 80)
   },
 }
 
