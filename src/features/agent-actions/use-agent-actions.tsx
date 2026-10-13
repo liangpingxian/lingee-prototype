@@ -1,3 +1,4 @@
+import { guardUpgrade } from "@/features/artifact-upgrade/UpgradeGate"
 import { useState } from "react"
 import { useNavigate } from "react-router"
 import { ConfirmDialog, showToast, useDialog } from "@/ui"
@@ -34,7 +35,7 @@ export function useAgentActions(onChanged: () => void) {
     return void editSession({ title: draft.replace(/[:：]\s*$/, ""), draft: `/ai-partner-creator ${draft}`, projectId: agent.projectId, target: { agent: agent.id } })
   }
 
-  return {
+  const actions = {
     busy,
 
     /** 已发布 / 已提交的智能体，编辑前先确认（编辑后需要重新提交审核） */
@@ -145,6 +146,12 @@ export function useAgentActions(onChanged: () => void) {
       ))
     },
   }
+  return { ...actions, ...Object.fromEntries(
+    Object.entries(actions).filter(([key]) => key !== "busy").map(([key, action]) => [key, (agent: Agent) => {
+      const run = () => (action as (agent: Agent) => unknown)(agent)
+      if (!guardUpgrade([agent.id], run)) return run()
+    }]),
+  ) } as typeof actions
 }
 
 /** 能否提交：非预置，且状态是已保存或已驳回 */

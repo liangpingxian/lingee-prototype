@@ -54,3 +54,12 @@ html {
 :root[data-color-scheme="dark"] {
   --dialog-overlay: rgba(0, 0, 0, 0.6);
 }
+
+/* 公共弹窗与升级弹窗统一使用全屏灰色蒙层。显式覆盖主题 token，避免浅色主题透明。 */
+[data-component="dialog-overlay"] {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.32);
+  opacity: 1;
+  pointer-events: auto;
+}

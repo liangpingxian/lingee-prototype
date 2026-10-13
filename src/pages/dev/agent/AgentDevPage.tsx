@@ -1,3 +1,4 @@
+import { guardUpgrade, UpgradeCard } from "@/features/artifact-upgrade/UpgradeGate"
 import { CapsuleTag, Empty, Tile, useDialog } from "@/ui"
 import { publicUrl } from "@/lib/public-url"
 import { useT } from "@/i18n"
@@ -55,10 +56,13 @@ export function AgentDevPage() {
       ) : (
         <div className={DEV_GRID}>
           {list.map((agent) => (
+            <UpgradeCard key={agent.id} id={agent.id}>
             <Tile
-              key={agent.id}
               className="dev-page-tile tile-filled tile-icon-40 group cursor-pointer"
-              onClick={() => dialog.show(() => <AgentDetailDialog agent={agent} onChanged={() => void data.refresh()} />)}
+              onClick={() => {
+                const open = () => dialog.show(() => <AgentDetailDialog agent={agent} onChanged={() => void data.refresh()} />)
+                if (!guardUpgrade([agent.id], open)) open()
+              }}
               icon={<img src={publicUrl(agent.avatar || pickAvatar(agent.id))} alt="" className="shrink-0 h-[40px] w-[40px]" />}
               name={agent.name}
               desc={agent.desc}
@@ -75,6 +79,7 @@ export function AgentDevPage() {
               }
               action={<AgentCardActions agent={agent} onChanged={() => void data.refresh()} />}
             />
+            </UpgradeCard>
           ))}
         </div>
       )}

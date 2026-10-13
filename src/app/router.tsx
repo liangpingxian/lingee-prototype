@@ -1,3 +1,4 @@
+import { UpgradeHost } from "@/features/artifact-upgrade/UpgradeGate"
 import { createBrowserRouter, Navigate, Outlet, useLocation } from "react-router"
 import { AppShell } from "./AppShell"
 import { Providers } from "./providers"
@@ -8,6 +9,7 @@ function Root() {
   return (
     <Providers>
       <Outlet />
+      <UpgradeHost />
     </Providers>
   )
 }

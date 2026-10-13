@@ -1,3 +1,4 @@
+import { guardUpgrade } from "@/features/artifact-upgrade/UpgradeGate"
 import { useState } from "react"
 import { BrandButton, ConfirmDialog, Empty, showToast, useDialog } from "@/ui"
 import { cx } from "@/lib/cx"
@@ -44,7 +45,7 @@ export function SkillDevPage() {
     void skillService.patch(id, change)
   }
   /** 打开批量向导。检查 / 企业分发 / 个人安装 / 删除、单个或多个，都走同一个弹窗 */
-  const openBatch = (config: Pick<BatchDialogProps, "mode" | "route" | "skills" | "skipSelect">) =>
+  const showBatch = (config: Pick<BatchDialogProps, "mode" | "route" | "skills" | "skipSelect">) =>
     dialog.show(
       () => (
         <BatchDialog
@@ -67,6 +68,10 @@ export function SkillDevPage() {
       undefined,
       { closeOnOverlayClick: false },
     )
+  const openBatch = (config: Pick<BatchDialogProps, "mode" | "route" | "skills" | "skipSelect">) => {
+    const run = () => showBatch(config)
+    if (!guardUpgrade(config.skills.map((skill) => skill.id), run)) run()
+  }
   // 编辑：建一个会话直接进去，输入框带上「编辑【名称】技能：」，右侧打开技能预览
   // extra：「去修复」时附在后面的修复提示词
   const edit = (skill: Skill, extra = "") => {
@@ -74,7 +79,7 @@ export function SkillDevPage() {
     return void editSession({ title: draft.replace(/[:：]\s*$/, ""), draft: `/kingdee-skill-creator ${draft}${extra}`, projectId: skill.projectId, target: { kdskill: skill.id } })
   }
 
-  const handlers: SkillActionHandlers = {
+  const rawHandlers: SkillActionHandlers = {
     onEdit: (skill) => {
       // 已提交 / 已发布的技能，编辑前需要二次确认
       if (skill.enterpriseStatus === "saved" || skill.enterpriseStatus === "rejected") return edit(skill)
@@ -108,13 +113,21 @@ export function SkillDevPage() {
     onDelete: (skill) => openBatch({ mode: "delete", skills: [skill] }),
   }
 
+  const handlers = Object.fromEntries(Object.entries(rawHandlers).map(([key, action]) => [key, (skill: Skill) => {
+    const run = () => action(skill)
+    if (!guardUpgrade([skill.id], run)) run()
+  }])) as unknown as SkillActionHandlers
+
   const exitBatch = () => {
     setBatchMode(false)
     setSelected([])
   }
   const toggle = (id: string) => setSelected((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]))
   const selectedSkills = data.list.filter((x) => selected.includes(x.id))
-  const openDetail = (skill: Skill) => dialog.show(() => <SkillDetailDialog skill={skill} onEdit={() => handlers.onEdit(skill)} onFix={(prompt) => edit(skill, prompt)} />)
+  const openDetail = (skill: Skill) => {
+    const open = () => dialog.show(() => <SkillDetailDialog skill={skill} onEdit={() => handlers.onEdit(skill)} onFix={(prompt) => edit(skill, prompt)} />)
+    if (!guardUpgrade([skill.id], open)) open()
+  }
 
   return (
     <DevPageLayout

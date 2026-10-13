@@ -1,3 +1,4 @@
+import { guardUpgrade, legacySessions, useUpgradeStore } from "@/features/artifact-upgrade/UpgradeGate"
 import { useEffect, useState } from "react"
 import { Navigate, useParams, useSearchParams } from "react-router"
 import { cx } from "@/lib/cx"
@@ -39,6 +40,11 @@ export function Component() {
   const previewOpen = usePanel((s) => !!s.view && (s.view !== "review" || !!sessionId))
   const sessionCollapsed = usePanel((s) => s.sessionCollapsed) && previewOpen
   const session = sessions.find((x) => x.id === sessionId)
+  const upgraded = useUpgradeStore((s) => s.upgraded)
+  useEffect(() => {
+    const ids = [...(legacySessions[sessionId ?? ""] ?? []), editing.agent ?? "", editing.kdskill ?? ""]
+    guardUpgrade(ids, () => {})
+  }, [sessionId, editing.agent, editing.kdskill, upgraded])
   const loaded = sessionId ? messages[sessionId] : undefined
 
   useEffect(() => {

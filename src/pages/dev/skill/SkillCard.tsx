@@ -1,3 +1,4 @@
+import { UpgradeCard } from "@/features/artifact-upgrade/UpgradeGate"
 import type { ReactNode } from "react"
 import { CapsuleTag, Icon, Tile, Tooltip, type IconName } from "@/ui"
 import { cx } from "@/lib/cx"
@@ -51,7 +52,7 @@ export function SkillCard(props: {
   const { skill } = props
   const enterpriseKey = skill.enterpriseStatus === "saved" ? "none" : skill.enterpriseStatus
   return (
-    <div className="relative">
+    <UpgradeCard id={skill.id}>
       <Tile
         name={skill.displayName}
         desc={skill.desc}
@@ -81,6 +82,6 @@ export function SkillCard(props: {
           </div>
         }
       />
-    </div>
+    </UpgradeCard>
   )
 }
