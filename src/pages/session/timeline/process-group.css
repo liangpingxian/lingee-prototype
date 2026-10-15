@@ -74,3 +74,20 @@
   [data-slot="session-turn-list"] [data-component="assistant-part-group"],
   [data-slot="session-turn-list"] [data-component="tool-stage-group-list"] > * { animation: runtime-part-in 220ms ease-out; }
 }
+
+/* Keep the final artifact close to its completion text, without stacked margins. */
+[data-slot="session-turn-list"] [data-component="assistant-parts"]:has(> [data-component="text-part"] [data-component="render-card"]) {
+  gap: 8px;
+}
+[data-slot="session-turn-list"] [data-component="assistant-parts"] > [data-component="text-part"]:has(+ [data-component="text-part"] [data-component="render-card"]) {
+  margin-bottom: 0;
+}
+[data-slot="session-turn-list"] [data-component="assistant-parts"] > [data-component="text-part"]:has([data-component="render-card"]) {
+  margin-top: 0;
+}
+[data-slot="session-turn-list"] [data-component="text-part"] [data-slot="text-part-body"] > [data-component="render-card"] {
+  margin-top: 0;
+}
+[data-slot="session-turn-list"] [data-slot="text-part-body"] > [data-component="markdown"] + [data-component="render-card"] {
+  margin-top: 8px;
+}
