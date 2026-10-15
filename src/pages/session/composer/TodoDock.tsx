@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
 import { DockTray } from "@/ui"
 import { inlinePaths } from "@/ui/icon/inline-paths.gen"
 import { useT } from "@/i18n"
@@ -25,14 +25,28 @@ export function TodoDock(props: { todos: Todo[] }) {
   const t = useT()
   const [collapsed, setCollapsed] = useState(true)
   const done = props.todos.filter((x) => x.status === "completed").length
-  const activeIndex = props.todos.findIndex((x) => x.status === "in_progress")
-  const active = props.todos[activeIndex]
+  const inProgress = props.todos.filter(x => x.status === "in_progress").length
+  const active = props.todos.findLast(x => x.status === "in_progress") ?? props.todos.find(x => x.status === "pending") ?? props.todos.filter(x => x.status === "completed").at(-1) ?? props.todos[0]
+  const activeIndex = props.todos.indexOf(active)
+  const content = useRef<HTMLDivElement>(null)
+  const header = useRef<HTMLDivElement>(null)
+  const [height, setHeight] = useState(338)
+  const [headerHeight, setHeaderHeight] = useState(28)
+  useLayoutEffect(() => {
+    const update = () => { if(content.current) setHeight(content.current.scrollHeight + 32); if(header.current) setHeaderHeight(header.current.offsetHeight) }
+    const observer = new ResizeObserver(update)
+    if(content.current) observer.observe(content.current)
+    if(header.current) observer.observe(header.current)
+    update()
+    return () => observer.disconnect()
+  }, [collapsed, props.todos])
   const label = t(collapsed ? "session.todo.expand" : "session.todo.collapse")
 
   return (
-    <DockTray data-component="session-todo-dock" style={{ overflowX: "visible", overflowY: "hidden" }}>
-      <div>
+    <DockTray data-component="session-todo-dock" style={{ overflowX: "visible", overflowY: "hidden", maxHeight: collapsed ? headerHeight + 32 : Math.min(338, height), transition: "max-height 260ms cubic-bezier(0.22, 1, 0.36, 1)" }}>
+      <div ref={content}>
         <div
+          ref={header}
           data-action="session-todo-toggle"
           className="flex items-center gap-1.5 overflow-visible cursor-pointer select-none"
           tabIndex={0}
@@ -41,21 +55,22 @@ export function TodoDock(props: { todos: Todo[] }) {
           aria-label={label}
           title={label}
           onClick={() => setCollapsed(!collapsed)}
+          onKeyDown={(e) => { if(e.key === "Enter" || e.key === " ") { e.preventDefault(); setCollapsed(!collapsed) } }}
         >
           <p className="text-[16px] leading-[24px] font-[500] text-[var(--todo-docker-title)] shrink-0">{t("session.todo.title")}</p>
           {collapsed && active && (
             <div className="flex items-center gap-1.5 ml-2 min-w-0 flex-1 overflow-hidden">
-              <span className="session-todo-item-num">
+              {active.status === "in_progress" && <span className="session-todo-item-num">
                 <span>{activeIndex + 1}</span>
                 <Spinner id="sessionTodoSpinnerGradientHeader" />
-              </span>
+              </span>}
               <span className="text-[14px] leading-[22px] text-[var(--text-base)] truncate" title={active.content}>
                 {active.content}
               </span>
             </div>
           )}
           <p className="text-[16px] leading-[24px] font-[400] text-[var(--todo-docker-num)] ml-auto shrink-0">
-            {done + (active ? 1 : 0)}/{props.todos.length}
+            {done + inProgress}/{props.todos.length}
           </p>
           <button className="flex items-center justify-center ml-1.5 w-7 h-7 text-[var(--neutral-600)] hover:bg-[var(--icon-bg-hover)] active:text-[var(--neutral-900)] cursor-pointer rounded-[8px]">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -93,7 +108,7 @@ export function TodoDock(props: { todos: Todo[] }) {
                     </span>
                     <span
                       className="text-[14px] leading-[22px] font-[400] min-w-0 break-words"
-                      style={{ textDecoration: todo.status === "cancelled" ? "line-through" : undefined }}
+                      style={{ textDecoration: todo.status === "cancelled" || todo.status === "completed" ? "line-through" : undefined }}
                     >
                       {todo.content}
                     </span>

@@ -30,20 +30,28 @@ export interface ReasoningPart {
   type: "reasoning"
   text: string
   time: { start: number; end?: number }
+  display?: "scroll"
 }
 
 export interface ToolPart {
   id: string
   type: "tool"
-  tool: "read" | "edit" | "write" | "bash" | "grep" | "skill" | "websearch" | "question"
+  tool: "mcp" | "read" | "edit" | "write" | "bash" | "grep" | "skill" | "websearch" | "question"
   title: string
   detail?: string
   /** 展开后看到的输出内容 */
   output?: string
+  stageGroup?: boolean
+  questionAnswers?: Array<{ question: string; answers: string[] }>
   state: "running" | "completed" | "error"
 }
 
-export type Part = TextPart | ReasoningPart | ToolPart
+export interface ExecutionPlanPart {
+  id: string
+  type: "execution-plan"
+  stages: Array<Array<{ title: string; detail: string }>>
+}
+export type Part = TextPart | ReasoningPart | ToolPart | ExecutionPlanPart
 
 export interface Message {
   id: string

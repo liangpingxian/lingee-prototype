@@ -1,20 +1,35 @@
-import type { PermissionRequest, QuestionInfo, ToolPart } from "../types"
+import type { ExecutionPlanPart, PermissionRequest, QuestionInfo, ToolPart } from "../types"
 
 export interface ScenarioStep {
   /** 进入这一步时，把第几条待办标为进行中（之前的都算完成） */
+  resolve?: () => Partial<ScenarioStep>
+  onAnswer?: (answers: string[][]) => void
   todo?: number
   reasoning?: string
-  tools?: Array<Pick<ToolPart, "tool" | "title" | "detail" | "output">>
+  reasoningUnit?: "sentence"
+  reasoningDelayMs?: number
+  reasoningDisplay?: "scroll"
+  tools?: Array<Pick<ToolPart, "tool" | "title" | "detail" | "output" | "stageGroup">>
   /** 向用户提问，回放暂停直到用户回答或跳过。目前三套开发剧本都不提问，一路做到底；需要演示提问时再加 */
   question?: QuestionInfo[]
   /** 申请权限，回放暂停直到用户允许或拒绝。同上，默认剧本不用 */
   permission?: Pick<PermissionRequest, "permission" | "patterns" | "command">
   text?: string
+  plan?: ExecutionPlanPart["stages"]
   /** 这一步结束时在回复里追加一张产物卡片（技能 / 智能体 / 业务组件）。走到这一步才执行，产物也在这时落库 */
   card?: () => { kind: string; config: Record<string, string> }
 }
 
 export interface Scenario {
+  /** Presentation cadence, scoped to this scenario; omitted values retain the normal playback speed. */
+  pacing?: {
+    textUnit?: "paragraph"
+    textChunk: number
+    textDelayMs: number
+    textHoldMs: number
+    toolDelayMs: number
+    stepPauseMs: number
+  }
   todos: string[]
   steps: ScenarioStep[]
 }

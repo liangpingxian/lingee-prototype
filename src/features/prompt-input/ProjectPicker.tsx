@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router"
 import { Button, DropdownMenu, Icon, Tooltip } from "@/ui"
 import { inlinePaths } from "@/ui/icon/inline-paths.gen"
@@ -10,6 +10,21 @@ const MUTED = "var(--fg-color-black-muted, rgba(0, 0, 0, 0.64))"
 
 /** 新会话时输入框下方的项目选择（git 项目会额外带出当前分支） */
 export function ProjectPicker(props: { projectId: string; onCreateProject: () => void }) {
+  const header = useRef<HTMLDivElement>(null)
+  const [collapsed, setCollapsed] = useState(false)
+  useEffect(() => {
+    const element = header.current
+    if (!element) return
+    const observer = new ResizeObserver(() => {
+      element.classList.remove("collapsed")
+      const required = Array.from(element.children).reduce((width, child) => width + child.getBoundingClientRect().width, 28)
+      const next = element.clientWidth < Math.max(420, required)
+      element.classList.toggle("collapsed", next)
+      setCollapsed(next)
+    })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
   const t = useT()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -17,7 +32,7 @@ export function ProjectPicker(props: { projectId: string; onCreateProject: () =>
   const current = projects.find((x) => x.id === props.projectId)
 
   return (
-    <div data-component="prompt-new-session-header" className="shrink-0 flex items-center flex-wrap px-3 pt-1 pb-1" style={{ gap: "var(--2x-small, 4px)" }}>
+    <div ref={header} data-component="prompt-new-session-header" className={cx("shrink-0 flex items-center flex-wrap px-3 pt-1 pb-1", collapsed && "collapsed")} style={{ gap: "var(--2x-small, 4px)" }}>
       <div data-component="prompt-project-top-control">
         <DropdownMenu placement="bottom-start" gutter={10} open={open} onOpenChange={setOpen}>
           <DropdownMenu.Trigger asChild>
@@ -32,7 +47,7 @@ export function ProjectPicker(props: { projectId: string; onCreateProject: () =>
                 <Icon name="folder-group" size="small" className="size-4 shrink-0" style={{ color: MUTED }} />
                 <span
                   title={current?.name}
-                  className="truncate"
+                  className="truncate prompt-new-session-name"
                   style={{ color: MUTED, fontSize: "var(--font-size-small-14, 14px)", fontWeight: 400, lineHeight: "18px" }}
                 >
                   {current?.name}
@@ -92,10 +107,11 @@ export function ProjectPicker(props: { projectId: string; onCreateProject: () =>
       </div>
       {current?.git && current.branch && (
         <span className="inline-flex items-center gap-1 h-8 px-2 rounded-[8px]" style={{ color: MUTED, fontSize: 14, lineHeight: "18px" }}>
-          <Icon name="branch" size="small" className="size-4 shrink-0" style={{ color: MUTED }} />
-          <span className="truncate max-w-[200px]" title={current.branch}>
+          <Icon name="git-branch-network" size="small" className="size-4 shrink-0" style={{ color: MUTED }} />
+          <span className="truncate prompt-new-session-name max-w-[200px]" title={current.branch}>
             {current.branch}
           </span>
+          <Icon name="chevron-right-16" size="small" style={{ color: MUTED }} />
         </span>
       )}
     </div>

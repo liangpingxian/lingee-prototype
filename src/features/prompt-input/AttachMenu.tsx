@@ -1,4 +1,4 @@
-import { Button, DropdownMenu, Icon, showToast, type IconName } from "@/ui"
+import { Button, DropdownMenu, Icon, type IconName } from "@/ui"
 import { useT } from "@/i18n"
 import { usePrompt } from "@/stores/prompt"
 
@@ -22,7 +22,7 @@ function ModeItem(props: { mode: "spec" | "quest"; icon: IconName }) {
 }
 
 /** 输入框左下角的「+」：上传文件 / 上传文件夹 / Spec 与 目标 两个互斥模式 */
-export function AttachMenu(props: { placement: "top-start" | "bottom-start" }) {
+export function AttachMenu(props: { placement: "top-start" | "bottom-start"; onPick: (folder: boolean) => void; restoreFocus: () => void }) {
   const t = useT()
   return (
     <DropdownMenu placement={props.placement} gutter={10}>
@@ -37,17 +37,17 @@ export function AttachMenu(props: { placement: "top-start" | "bottom-start" }) {
         </Button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content className="min-w-[260px] p-1 rounded-[16px] flex flex-col gap-[2px]">
+        <DropdownMenu.Content onCloseAutoFocus={(event) => { event.preventDefault(); props.restoreFocus() }} className="min-w-[260px] p-1 rounded-[16px] flex flex-col gap-[2px]">
           <DropdownMenu.Item
             className="flex items-center gap-1 px-2 cursor-pointer text-[var(--neutral-700)]"
-            onSelect={() => showToast({ description: t("prompt.tools.upload") })}
+            onSelect={() => props.onPick(false)}
           >
             <Icon name="attachment" size="small" className="text-[var(--neutral-600)]" />
             <span className="text-[14px] font-[400] leading-[20px]">{t("prompt.tools.upload")}</span>
           </DropdownMenu.Item>
           <DropdownMenu.Item
             className="flex items-center gap-1 px-2 cursor-pointer text-[var(--neutral-700)]"
-            onSelect={() => showToast({ description: t("prompt.tools.uploadFolder") })}
+            onSelect={() => props.onPick(true)}
           >
             <Icon name="folder-16" size="small" className="text-[var(--neutral-600)]" />
             <span className="text-[14px] font-[400] leading-[20px]">{t("prompt.tools.uploadFolder")}</span>

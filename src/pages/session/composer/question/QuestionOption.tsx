@@ -37,6 +37,7 @@ export function QuestionOption(props: {
       data-picked={props.picked}
       role={props.multi ? "checkbox" : "radio"}
       aria-checked={props.picked}
+      onMouseDown={(e) => { if (e.button === 0) e.preventDefault() }}
       onClick={props.onClick}
     >
       <Mark multi={props.multi} picked={props.picked} index={props.index} />

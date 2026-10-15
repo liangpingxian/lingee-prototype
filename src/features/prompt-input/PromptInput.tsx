@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react"
-import { DockContainer, DockShellForm, DockTray, IconButton, Tooltip } from "@/ui"
+import { DockContainer, DockShellForm, DockTray, IconButton, Icon, Tooltip } from "@/ui"
+import { useSync } from "@/stores/sync"
+import { EnhanceButton } from "./EnhanceButton"
+import { ContextUsage } from "./ContextUsage"
+import { Attachments, type Attachment } from "./Attachments"
 import { cx } from "@/lib/cx"
 import { useT } from "@/i18n"
 import { usePrompt } from "@/stores/prompt"
@@ -32,10 +36,21 @@ export function PromptInput(props: PromptInputProps) {
   const editor = useRef<EditorHandle>(null)
   const [focused, setFocused] = useState(false)
   const [empty, setEmpty] = useState(true)
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const attachmentsRef = useRef(attachments)
+  attachmentsRef.current = attachments
+  const fileInput = useRef<HTMLInputElement>(null)
+  const folderInput = useRef<HTMLInputElement>(null)
+  const [enhancing, setEnhancing] = useState(false)
+  const [original, setOriginal] = useState<string>()
+  const enhanceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const project = useSync((state) => state.projects.find((item) => item.id === props.projectId))
   const [shake, setShake] = useState(false)
   const { mode, draft, takeDraft } = usePrompt()
   const inSession = props.sessionId !== undefined
-  const disabled = !props.working && empty
+  const disabled = enhancing || (!props.working && empty && !attachments.length)
+  const hoodVisible = inSession && project?.git
+  const restoreFocus = () => editor.current?.focus()
   const placeholder = t(mode === "quest" ? "prompt.placeholder.quest" : "prompt.placeholder.normal", { example: "", agent: "" })
 
   // "/" 与 "@" 的补全：选中后把触发词替换成胶囊 / 文件引用 / 指令文本
@@ -57,11 +72,47 @@ export function PromptInput(props: PromptInputProps) {
     editor.current?.focus()
   }, [props.sessionId, props.projectId])
 
-  const submit = () => {
-    if (props.working) return props.onAbort()
+  const clearAttachments = () => {
+    attachmentsRef.current.forEach((item) => { if (item.url) URL.revokeObjectURL(item.url) })
+    setAttachments([])
+  }
+  useEffect(() => () => {
+    clearTimeout(enhanceTimer.current)
+    attachmentsRef.current.forEach((item) => { if (item.url) URL.revokeObjectURL(item.url) })
+  }, [])
+  useEffect(() => {
+    clearAttachments()
+    clearTimeout(enhanceTimer.current)
+    setEnhancing(false)
+    setOriginal(undefined)
+  }, [props.projectId, props.sessionId])
+
+  const addFiles = (files: FileList | null) => {
+    const selected = Array.from(files ?? []).map((file) => ({ id: crypto.randomUUID(), file, url: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined }))
+    if (selected.length) setAttachments((current) => [...current, ...selected])
+    restoreFocus()
+  }
+  const enhance = () => {
+    if (enhancing) { clearTimeout(enhanceTimer.current); setEnhancing(false); return }
+    if (original !== undefined) { editor.current?.set(original); setOriginal(undefined); return }
     const text = editor.current?.value() ?? ""
     if (!text) return
+    setEnhancing(true)
+    // Local prototype response; no product endpoint or user data leaves the browser.
+    enhanceTimer.current = setTimeout(() => {
+      setOriginal(text)
+      editor.current?.set(`${text.trim()}\n\n${t("proto.prompt.enhanceRequirements")}`)
+      setEnhancing(false)
+    }, 700)
+  }
+  const submit = () => {
+    if (enhancing) return
+    if (props.working) return props.onAbort()
+    const text = [editor.current?.value() ?? "", ...attachments.map((item) => `@${item.file.webkitRelativePath || item.file.name}`)].filter(Boolean).join("\n")
+    if (!text) return
     props.onSubmit(text)
+    clearAttachments()
+    setOriginal(undefined)
     editor.current?.clear()
   }
 
@@ -84,9 +135,19 @@ export function PromptInput(props: PromptInputProps) {
           onActive={completion.setActiveKey}
         />
       )}
+      {hoodVisible && (
+        <div data-component="composer-banner-hood" className="relative z-[2] shrink-0 flex flex-col rounded-[30px_30px_0_0] backdrop-blur-[2px] text-[14px] leading-[22px] px-4" style={{ background: "var(--hood-bg)", width: "calc(100% - 40px)", margin: "0 auto", maxWidth: 760 }}>
+          <div data-component="prompt-session-header" data-banner="branch" className="relative inline-flex w-full items-center justify-between pt-[9px] pb-[7px] min-h-[44px]">
+            <div className="flex items-center flex-nowrap gap-x-5 min-w-0">
+              <Tooltip placement="top" value={project.worktree}><span className="flex items-center gap-1 min-w-0 max-w-[280px] text-[var(--neutral-600)]"><Icon name="folder-group" size="small" /><span className="truncate prompt-hood-name">{project.name}</span></span></Tooltip>
+              {project.branch && <Tooltip placement="top" value={project.branch}><span className="flex items-center gap-1 min-w-0 max-w-[240px] text-[var(--neutral-600)]"><Icon name="git-branch-network" size="small" /><span className="truncate prompt-hood-name">{project.branch}</span></span></Tooltip>}
+            </div>
+          </div>
+        </div>
+      )}
       <div
-        className={cx("z-[3] flex flex-col gap-0 transition-colors duration-200 ease-out rounded-[30px]", inSession ? "p-[1px]" : "p-[3px]")}
-        style={{ background: focused ? "var(--primary-500-6)" : "var(--neutral-50)" }}
+        className={cx("z-[3] flex flex-col gap-0 transition-colors duration-200 ease-out rounded-[30px]", inSession ? hoodVisible ? "p-0" : "p-[1px]" : "p-[3px]")}
+        style={{ background: focused ? "var(--primary-500-6)" : "var(--neutral-50)", boxShadow: hoodVisible ? "0px -3px 10px 0px var(--shadow-colorblack-subtle)" : undefined }}
       >
         <DockContainer
           data-in-session={inSession ? "" : undefined}
@@ -105,11 +166,18 @@ export function PromptInput(props: PromptInputProps) {
                 if (e.target === e.currentTarget) editor.current?.focus()
               }}
             >
+              <Attachments items={attachments} onRemove={(id) => {
+                const item = attachments.find((item) => item.id === id)
+                if (item?.url) URL.revokeObjectURL(item.url)
+                setAttachments((items) => items.filter((item) => item.id !== id))
+              }} />
               <div className="relative">
                 <Editor
                   ref={editor}
                   placeholder={placeholder}
                   newSession={!inSession}
+                  hasAttachments={!!attachments.length}
+                  enhancing={enhancing}
                   onFocusChange={setFocused}
                   onSubmit={submit}
                   onTrigger={completion.setTrigger}
@@ -120,27 +188,31 @@ export function PromptInput(props: PromptInputProps) {
                   }}
                 />
                 {empty && (
-                  <div className="absolute top-0 inset-x-0 px-4 pt-4 text-[16px] leading-[30px] text-[var(--prompt-input-placeholder)] pointer-events-none whitespace-nowrap truncate">
+                  <div className={cx("absolute top-0 inset-x-0 px-4 text-[16px] leading-[30px] text-[var(--prompt-input-placeholder)] pointer-events-none whitespace-nowrap truncate", attachments.length ? "pt-0" : "pt-4")}>
                     {placeholder}
                   </div>
                 )}
               </div>
             </div>
 
+            <input ref={fileInput} type="file" multiple className="hidden" onChange={(event) => { addFiles(event.currentTarget.files); event.currentTarget.value = "" }} />
+            <input ref={folderInput} type="file" multiple {...{ webkitdirectory: "" }} className="hidden" onChange={(event) => { addFiles(event.currentTarget.files); event.currentTarget.value = "" }} />
             <DockTray attach="top" className="shrink-0">
-              <div className="flex items-center justify-between gap-1 min-w-0 px-2.5 pb-2.5">
+              <div className="prompt-input-bar flex items-center justify-between gap-1 min-w-0 px-2.5 pb-2.5">
                 <div>
                   <div className="flex items-center gap-2">
-                    <AttachMenu placement={inSession ? "top-start" : "bottom-start"} />
+                    <AttachMenu placement={inSession ? "top-start" : "bottom-start"} onPick={(folder) => (folder ? folderInput : fileInput).current?.click()} restoreFocus={restoreFocus} />
                   </div>
                 </div>
                 <div className="prompt-input-bar flex items-center gap-2 min-w-0 flex-1 relative">
                   <div className="chips-row flex items-center gap-2 min-w-0 flex-1" />
-                  <ModeChip />
+                  <ModeChip restoreFocus={restoreFocus} />
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <ModelSelector placement={inSession ? "top-end" : "bottom-end"} />
+                  {inSession && <ContextUsage projectId={props.projectId} restoreFocus={restoreFocus} />}
+                  <ModelSelector placement={inSession ? "top-end" : "bottom-end"} restoreFocus={restoreFocus} />
                 </div>
+                <EnhanceButton state={enhancing ? "loading" : props.working || empty ? "disabled" : original !== undefined ? "applied" : "idle"} onClick={enhance} />
                 <div
                   className="inline-flex"
                   onPointerDown={() => {
@@ -161,7 +233,7 @@ export function PromptInput(props: PromptInputProps) {
                       variant="ghost"
                       className={cx(
                         "size-9 min-w-9 min-h-9 rounded-[50%]",
-                        disabled ? "bg-[var(--surface-base)]" : "bg-[var(--primary-600)] [&_[data-slot=icon-svg]]:!text-[var(--white-100)]",
+                        disabled ? "bg-[rgba(0,0,0,0.03)]" : "bg-[var(--primary-600)] [&_[data-slot=icon-svg]]:!text-[var(--white-100)]",
                         shake && "prompt-submit-shake",
                       )}
                       onAnimationEnd={() => setShake(false)}

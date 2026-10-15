@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, type KeyboardEvent } from "react"
+import { useState, forwardRef, useEffect, useImperativeHandle, useRef, type KeyboardEvent } from "react"
 import { cx } from "@/lib/cx"
 import { parseSlash } from "./skill-entries"
 import { createSkillPill } from "./skill-pill"
@@ -25,6 +25,8 @@ export interface EditorHandle {
 interface EditorProps {
   placeholder: string
   newSession: boolean
+  hasAttachments?: boolean
+  enhancing?: boolean
   onChange: (state: { empty: boolean; skill?: string }) => void
   onTrigger: (trigger: Trigger | null) => void
   /** 补全弹层打开时由它优先处理方向键 / 回车 / Esc；返回 true 表示已处理 */
@@ -51,6 +53,7 @@ function createFilePill(path: string) {
 
 /** 富文本输入区：非受控 contenteditable，支持技能胶囊、文件引用、Enter 发送、Shift+Enter 换行 */
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(props, ref) {
+  const [hasSkill, setHasSkill] = useState(false)
   const el = useRef<HTMLDivElement>(null)
   const latest = useRef(props)
   latest.current = props
@@ -63,6 +66,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(prop
     // 清掉浏览器在空 contenteditable 里自动塞的占位 <br>，否则占位文案不会回来
     if (!node.textContent && !node.querySelector("[data-type]")) node.replaceChildren()
     const pill = node.querySelector<HTMLElement>("[data-type=agent]")
+    setHasSkill(!!pill)
     latest.current.onChange({ empty: readText(node).trim() === "", skill: pill?.dataset.name })
   }
 
@@ -150,6 +154,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(prop
       contentEditable
       suppressContentEditableWarning
       spellCheck={false}
+      autoCapitalize="sentences"
+      autoCorrect="on"
+      {...{ autoComplete: "off" }}
+      inputMode="text"
+      style={{ paddingBottom: hasSkill ? 6 : 14 }}
       onInput={() => {
         notify()
         detectTrigger()
@@ -175,9 +184,11 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(prop
         props.onSubmit()
       }}
       className={cx(
-        "select-text w-full px-4 pb-4 pt-4 text-[16px] leading-[30px] text-[var(--prompt-input-text)] focus:outline-none whitespace-pre-wrap",
+        "select-text w-full px-4 pb-4 text-[16px] leading-[30px] text-[var(--prompt-input-text)] focus:outline-none whitespace-pre-wrap",
         "[&_[data-type=file]]:text-syntax-property [&_[data-type=agent]]:text-syntax-type [&_[data-type=agent]]:mr-[8px]",
         props.newSession && "mb-4",
+        props.hasAttachments ? "pt-0" : "pt-4",
+        props.enhancing && "enhance-text-shimmer",
       )}
     />
   )

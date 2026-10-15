@@ -1,3 +1,4 @@
+import { procurementPrompt } from "@/services/procurement"
 import { guardUpgrade, legacySessions, useUpgradeStore } from "@/features/artifact-upgrade/UpgradeGate"
 import { useEffect, useState } from "react"
 import { Navigate, useParams, useSearchParams } from "react-router"
@@ -48,6 +49,10 @@ export function Component() {
   const loaded = sessionId ? messages[sessionId] : undefined
 
   useEffect(() => {
+    if (!sessionId && search.get("demo") === "procurement") setDraft(procurementPrompt)
+  }, [sessionId, search, setDraft])
+
+  useEffect(() => {
     if (sessionId) void loadMessages(sessionId)
   }, [sessionId, loadMessages])
 
@@ -66,6 +71,7 @@ export function Component() {
 
   if (!ready) return <div className="size-full bg-background-page" />
   if (!projects.some((x) => x.id === projectId) || (sessionId && !session)) return <Navigate to="/" replace />
+
 
   return (
     <div className="relative size-full min-h-0 flex-1 overflow-hidden flex flex-col bg-background-page">

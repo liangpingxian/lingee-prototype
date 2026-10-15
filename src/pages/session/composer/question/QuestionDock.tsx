@@ -1,3 +1,4 @@
+import { SmartIdentifierIcon } from "@/source-runtime/SmartIdentifierIcon"
 import { useEffect, useRef, useState } from "react"
 import { Button, DockPrompt, Icon } from "@/ui"
 import { cx } from "@/lib/cx"
@@ -14,6 +15,8 @@ export function QuestionDock(props: { request: QuestionRequest; onSubmit: (answe
   const t = useT()
   const questions = props.request.questions
   const state = useQuestionState(questions)
+  const options = useRef<HTMLDivElement>(null)
+  const navigating = useRef(false)
   const sections = useRef<Array<HTMLDivElement | null>>([])
   const [hoverConfirm, setHoverConfirm] = useState(false)
   const single = questions.length <= 1
@@ -23,7 +26,14 @@ export function QuestionDock(props: { request: QuestionRequest; onSubmit: (answe
 
   // 切题时把对应题目滚到可视区
   useEffect(() => {
-    sections.current[state.tab]?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+    const section = sections.current[state.tab]
+    const container = options.current
+    if (!section || !container) return
+    navigating.current = true
+    const top = section.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop
+    container.scrollTo({ top, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" })
+    const timer = setTimeout(() => { navigating.current = false }, 320)
+    return () => clearTimeout(timer)
   }, [state.tab])
 
   const confirm = () => {
@@ -42,7 +52,12 @@ export function QuestionDock(props: { request: QuestionRequest; onSubmit: (answe
     <DockPrompt
       kind="question"
       onKeyDown={(e) => {
-        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) confirm()
+        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); confirm(); return }
+        if (e.altKey && e.key.toLowerCase() === "r") { e.preventDefault(); state.selectAllRecommended(); return }
+        if ((e.target as HTMLElement).matches("textarea,input")) return
+        if (e.key === "Escape") { e.preventDefault(); skip() }
+        if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); state.setTab(Math.max(0, state.tab - 1)) }
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); state.setTab(Math.min(questions.length - 1, state.tab + 1)) }
       }}
       header={
         single ? undefined : (
@@ -77,8 +92,8 @@ export function QuestionDock(props: { request: QuestionRequest; onSubmit: (answe
       footer={
         <>
           {hasRecommended && (
-            <Button variant="ghost" size="large" onClick={state.selectAllRecommended} className="mr-auto inline-flex items-center gap-1.5">
-              <Icon name="check" size="small" className="size-4 shrink-0" />
+            <Button variant="ghost" size="large" onClick={state.selectAllRecommended} aria-keyshortcuts="Alt+R" className="mr-auto inline-flex items-center gap-1.5">
+              <SmartIdentifierIcon className="size-4 shrink-0" />
               {t("ui.question.selectAllRecommended")}
             </Button>
           )}
@@ -116,7 +131,12 @@ export function QuestionDock(props: { request: QuestionRequest; onSubmit: (answe
         </>
       }
     >
-      <div data-slot="question-options">
+      <div data-slot="question-options" ref={options} onScroll={() => {
+        if (navigating.current || state.editing !== null || !options.current) return
+        const top = options.current.getBoundingClientRect().top
+        const index = sections.current.findLastIndex(section => section && section.getBoundingClientRect().top - top <= 40)
+        if (index >= 0 && index !== state.tab) state.setTab(index)
+      }}>
         {questions.map((q, qi) => (
           <div
             key={qi}
@@ -169,7 +189,7 @@ export function QuestionDock(props: { request: QuestionRequest; onSubmit: (answe
                       value={state.custom[qi]}
                       rows={1}
                       wrap="soft"
-                      onChange={(e) => state.setCustomValue(qi, e.currentTarget.value)}
+                      onChange={(e) => { state.setCustomValue(qi, e.currentTarget.value); e.currentTarget.style.height = "auto"; e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px` }}
                       onBlur={() => state.setEditing(null)}
                       onKeyDown={(e) => {
                         if (e.key === "Escape" || (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing)) {

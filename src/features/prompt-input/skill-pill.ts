@@ -49,7 +49,7 @@ export function createSkillPill(name: string, onRemove: () => void) {
   close.className = "pill-close"
   close.setAttribute("aria-hidden", "true")
   Object.assign(close.style, { width: "16px", height: "16px", flexShrink: "0", color: "var(--primary-400)", cursor: "pointer" })
-  close.innerHTML = svg("close-small")
+  close.innerHTML = svg("close-small-fill")
   close.addEventListener("mousedown", (e) => {
     e.preventDefault()
     e.stopPropagation()

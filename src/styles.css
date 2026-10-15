@@ -9,9 +9,13 @@
 @import "./vendor/kcode-web/src/components/prompt-input/model-selector.css";
 @import "./vendor/kcode-web/src/components/prompt-input/slash-popover.css";
 @import "./vendor/kcode-web/src/pages/session/message-timeline.css";
+/* Exact runtime CSS snapshots from the current Build source. */
+@import "./source-runtime/runtime.css";
 
 /* Tailwind 默认只扫描 src/，入口 HTML 里的类名需要单独声明 */
 @source "../index.html";
+/* Original Solid snapshots are reference material, not additional application markup. */
+@source not "./source-runtime/reference";
 
 /*
  * dark: 变体跟着应用自己的主题走（<html data-color-scheme="dark">），而不是跟系统的深浅色偏好。

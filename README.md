@@ -62,3 +62,23 @@ src/
 | `/mcp-apps-builder` | `mock/scenarios/mcp-app-create.ts` | 业务组件 `kdapp-artifact` | 组件详情抽屉 |
 
 剧本走到最后一步时把产物写进 `mock/dev-store.ts`，所以对应的开发页里能看到新卡片。抽屉在 `features/side-panel/drawer`，内容与开发页的详情弹窗共用同一批组件（`features/skill-detail`、`features/agent-config`、`features/mcp-app-detail`）。
+
+## 采购价格异常预警创建演示
+
+启动后进入 `/p/scm-skills/session?demo=procurement`。该链接仅在原有新任务输入框预填需求，点击发送后，进入产品现有的技能创建会话。
+
+- 完全复用 MessageTimeline、SessionTurn、ReasoningPart、ToolPart、TodoDock、QuestionDock、RenderCard 和 SkillDrawer，不使用独立演示页面或样式。
+- 原有流式回放驱动技能加载、技能检索、业务对象发现、工具发现及校验、执行方案、集中提问和技能文件生成。创建过程不展示待办控件或订单分析报告；完成后显示简短说明与技能产物卡片。
+- 规则通过原有提问区确认，可一键选择全部推荐项；阈值可自填。跳过时采用推荐配置，最终在生成摘要中明确展示实际规则。
+- 点击本地测试后才展示采购订单价格分析。默认 90 天、15% 阈值时精密轴承异常、紧固件套装正常；改为 30% 时两项均正常。180 天历史样本可展示时间范围及数量加权的影响。
+- 产物卡片打开原有技能预览抽屉；「本地测试」预填该技能，发送后按创建时的规则再次模拟。原有文件面板可查看技能说明、Python 脚本、执行方案和 10 条评测用例（已打开的文件树可点刷新）。
+- 重新演示：点击产品原有「新任务」，再次输入需求。所有记录及产物仅保存在原项目 Mock 内存数据库中，刷新会清空。
+- 核心剧本：`src/mock/scenarios/procurement-create.ts`；独立数据适配：`src/services/procurement.ts`；生成产物：`src/mock/procurement-artifacts.ts`。均不调用真实 ERP/DC/MCP。
+
+## 与产品源码对齐的运行时组件
+
+运行时样式来自当前「Build的源码」，通过 `npm run sync:runtime` 更新；原始组件代码保存在 `src/source-runtime/reference/`，CSS 和来源校验清单保存在同级目录。React 移植及组件对应关系见 [运行时移植说明](docs/runtime-source-port.md)。
+
+执行 `npm run test:runtime` 可检查来源完整性、执行分组和采购规则联动，再用 `npm run build` 检查构建。
+
+领导演示版本：界面及生成技能文件隐藏技术性 Mock 标签；底层继续使用独立本地 fixture，不调用真实 DC/ERP。采购业务样本及工具结构位于 `src/mock/fixtures/procurement-context.ts`。

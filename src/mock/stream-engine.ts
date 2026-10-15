@@ -29,13 +29,16 @@ export function resumeStream(sessionId: string, value: string[][] | PermissionRe
  * 把剧本回放成一串事件：待办 → 推理 → 工具调用 → 提问 / 权限 → 正文逐字输出 → 产物卡片。
  * 事件形状与真实后端的 SSE 对齐，页面只认事件，不关心来源。
  */
-export async function runAssistantStream(sessionId: string, prompt: string, emit: Emit) {
+export async function runAssistantStream(sessionId: string, prompt: string, emit: Emit, model?: string) {
   const run: Run = { controller: new AbortController() }
   runs.set(sessionId, run)
   const aborted = () => run.controller.signal.aborted
   const scenario = pickScenario({ prompt, projectId: db.sessions.find((x) => x.id === sessionId)?.projectId ?? "" })
 
-  const message: Message = { id: uid("msg"), sessionId, role: "assistant", agent: "build", time: { created: Date.now() }, parts: [] }
+  const pause = (ms: number) => sleep(ms, run.controller.signal)
+  const pacing = scenario.pacing
+
+  const message: Message = { id: uid("msg"), sessionId, role: "assistant", agent: "build", model, time: { created: Date.now() }, parts: [] }
   db.messages.push(message)
   emit({ type: "session.status", sessionId, status: "running" })
   emit({ type: "message.updated", message: structuredClone(message) })
@@ -47,11 +50,20 @@ export async function runAssistantStream(sessionId: string, prompt: string, emit
     emit({ type: "message.part.updated", sessionId, messageId: message.id, part: structuredClone(part) })
   }
 
-  const typewrite = async <T extends Part & { text: string }>(part: T, full: string, chunk: number, delay: number) => {
+  const typewrite = async <T extends Part & { text: string }>(part: T, full: string, chunk: number, delay: number, unit?: "sentence") => {
+    if (unit === "sentence" || pacing?.textUnit === "paragraph") {
+      const paragraphs = unit === "sentence" ? (full.match(/[^。！？]+[。！？]?/g) ?? []).map((sentence,index) => `${index ? "\n\n" : ""}${sentence}`) : full.match(/[\s\S]+?(?:\n{2,}|$)/g) ?? []
+      for (let index = 0; index < paragraphs.length && !aborted(); index++) {
+        part.text += paragraphs[index]
+        push(part)
+        if (index < paragraphs.length - 1) await pause(unit === "sentence" ? delay : pacing?.textDelayMs ?? delay)
+      }
+      return
+    }
     for (let i = 0; i < full.length && !aborted(); i += chunk) {
       part.text = full.slice(0, i + chunk)
       push(part)
-      await sleep(delay)
+      await pause(delay)
     }
   }
 
@@ -73,13 +85,15 @@ export async function runAssistantStream(sessionId: string, prompt: string, emit
     })
   }
 
-  await sleep(500)
-  for (const step of scenario.steps) {
+  await pause(500)
+  for (const template of scenario.steps) {
+    const step = { ...template, ...template.resolve?.() }
     if (aborted()) break
     if (step.todo !== undefined) setTodo(step.todo)
     if (step.reasoning) {
-      const part: Part = { id: uid("prt"), type: "reasoning", text: "", time: { start: Date.now() } }
-      await typewrite(part, step.reasoning, 3, 30)
+      const part: Part = { id: uid("prt"), type: "reasoning", text: "", display: step.reasoningDisplay, time: { start: Date.now() } }
+      await typewrite(part, step.reasoning, 3, step.reasoningDelayMs ?? 30, step.reasoningUnit)
+      if (step.reasoningDisplay === "scroll") await pause(850)
       part.time.end = Date.now()
       push(part)
     }
@@ -94,9 +108,10 @@ export async function runAssistantStream(sessionId: string, prompt: string, emit
     }
     for (const tool of step.tools ?? []) {
       if (aborted()) break
-      const part: Part = { id: uid("prt"), type: "tool", ...tool, state: "running" }
+      const part: Part = { id: uid("prt"), type: "tool", ...tool, stageGroup: tool.stageGroup || (step.tools?.length ?? 0) > 1, state: "running" }
       push({ ...part, detail: undefined, output: undefined })
-      await sleep(600 + Math.random() * 500)
+      await pause(pacing?.toolDelayMs ?? (600 + Math.random() * 500))
+      if (aborted()) break
       push({ ...part, state: "completed" })
     }
     if (step.question && !aborted()) {
@@ -104,18 +119,22 @@ export async function runAssistantStream(sessionId: string, prompt: string, emit
       push(tool)
       emit({ type: "question.asked", request: { id: uid("que"), sessionId, questions: step.question } })
       const answers = (await wait("clarification")) as string[][] | undefined
+      if (!aborted()) step.onAnswer?.(answers ?? [])
       emit({ type: "question.replied", sessionId })
       const summary = (answers ?? []).map((x) => x.join("、")).filter(Boolean)
-      push({ ...tool, state: "completed", detail: summary.join("；") || "已跳过", output: summary.join("\n") || undefined })
+      push({ ...tool, state: "completed", detail: summary.join("；") || "已跳过", output: summary.join("\n") || undefined, questionAnswers: step.question.map((question, i) => ({ question: question.question, answers: answers?.[i] ?? [] })) })
     }
     if (step.text && !aborted()) {
-      await typewrite({ id: uid("prt"), type: "text", text: "" }, step.text, 4, 24)
+      await typewrite({ id: uid("prt"), type: "text", text: "" }, step.text, pacing?.textChunk ?? 4, pacing?.textDelayMs ?? 24)
+      if (pacing) await pause(pacing.textHoldMs)
     }
+    if (step.plan && !aborted()) push({ id: uid("prt"), type: "execution-plan", stages: step.plan })
     if (step.card && !aborted()) {
       // 卡片指令整段一次推出，避免逐字输出时把半截指令当正文显示
       const card = step.card()
       push({ id: uid("prt"), type: "text", text: `:::render:${card.kind} ${JSON.stringify(card.config)}:::` })
     }
+    if (pacing && !aborted()) await pause(pacing.stepPauseMs)
   }
 
   if (!aborted()) emit({ type: "todo.updated", sessionId, todos: todos.map((todo) => ({ ...todo, status: "completed" })) })
